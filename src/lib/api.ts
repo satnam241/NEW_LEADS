@@ -804,7 +804,7 @@ function unmapStatus(s: Lead['status']): string {
     Contacted:  'contacted',
     Interested: 'contacted',  // backend enum doesn't have "interested"
     Closed:     'closed',
-    Lost:       'contacted',  // closest backend value
+    Lost:       'lost',  // closest backend value
   }
   return map[s] ?? 'new'
 }
@@ -1546,6 +1546,36 @@ export async function importLeadsFile(
 
 
 // api.ts
+export async function downloadLeads(filter: ExportFilter, format: ExportFormat) {
+  const token = localStorage.getItem('token') ?? ''
+
+  const status = filter !== 'all'
+    ? `&status=${filter.toLowerCase()}`
+    : ''
+
+  const url = `${API_BASE}/admin/leads/export?format=${format}${status}`
+
+  const res = await fetch(url, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  })
+
+  if (!res.ok) {
+    throw new Error('Download failed')
+  }
+
+  const blob = await res.blob()
+
+  const link = document.createElement('a')
+  link.href = window.URL.createObjectURL(blob)
+  link.download = `leads-${filter}-${Date.now()}.${format}`
+
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+}
+
 export async function exportLeads(params: {
   format: 'xlsx' | 'csv'
   status: string  // '' | 'new' | 'contacted' | 'closed' | 'lost'
@@ -1612,36 +1642,34 @@ import type { LeadFilters, FollowUpPayload } from '@/types'
 //       dateTo    → ?dateTo=      (ISO date string yyyy-MM-dd)
 //   • Date filters are appended first so backend can prioritise them
 //
-export async function fetchLeads(filters: LeadFilters, page: number) {
+// api.ts mein sirf fetchLeads function replace karo
+// /leads/leads → /admin/leads (jo search, status, dateFrom, dateTo support karta hai)
+
+export async function fetchLeads(
+  filters: LeadFilters,
+  page: number
+): Promise<{ data: Lead[]; count: number }> {
   const params = new URLSearchParams()
 
-  // ── Pagination ─────────────────────────────────────────────────────────
   params.set('page',  String(page))
   params.set('limit', '20')
 
-  // ── Date range FIRST (gives backend a chance to sort/filter by date) ───
-  // ✅ FIX: only append when non-empty; use exact backend param names
+  // Backend /admin/leads exactly ye params accept karta hai:
+  if (filters.search?.trim())   params.set('search',   filters.search.trim())
+  if (filters.status?.trim())   params.set('status',   filters.status.trim().toLowerCase()) // backend lowercase mein store karta hai
+  if (filters.source?.trim())   params.set('source',   filters.source.trim())
   if (filters.dateFrom?.trim()) params.set('dateFrom', filters.dateFrom.trim())
   if (filters.dateTo?.trim())   params.set('dateTo',   filters.dateTo.trim())
 
-  // ── Status filter ───────────────────────────────────────────────────────
-  // ✅ FIX: send PascalCase status exactly as stored in DB; skip if empty
-  if (filters.status?.trim())   params.set('status', filters.status.trim())
-
-  // ── Source filter ───────────────────────────────────────────────────────
-  if (filters.source?.trim())   params.set('source', filters.source.trim())
-
-  // ── Search (name / phone / email) ───────────────────────────────────────
-  // ✅ FIX: was previously sent as `q=` on some versions; now always `search=`
-  if (filters.search?.trim())   params.set('search', filters.search.trim())
-
-  const token = localStorage.getItem('token') ?? ''
-  const res = await fetch(`${API_BASE}/leads/leads?${params.toString()}`, {
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
+  const res = await fetch(`${API_BASE}/admin/leads?${params.toString()}`, {
+    headers: authHeaders(),
   })
+
+  if (res.status === 401) {
+    localStorage.removeItem('token')
+    window.location.href = '/login'
+    throw new Error('Unauthorized')
+  }
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({}))
@@ -1650,52 +1678,15 @@ export async function fetchLeads(filters: LeadFilters, page: number) {
 
   const raw = await res.json()
 
-  // Normalise both array and {leads, total} response shapes
-  const list  = Array.isArray(raw) ? raw : (raw.leads ?? raw.data ?? [])
-  const count = raw.total ?? raw.count ?? list.length
+  // Backend response: { success, leads, totalLeads, page, totalPages }
+  const list: any[]  = raw.leads ?? []
+  const count: number = raw.totalLeads ?? list.length
 
-  // Map backend fields → frontend Lead shape
-  const data = list.map((l: any) => ({
-    id:            l._id    ?? l.id    ?? '',
-    _id:           l._id,
-    name:          l.fullName ?? l.name ?? 'Unknown',
-    fullName:      l.fullName,
-    email:         l.email   ?? null,
-    phone:         l.phone   ?? null,
-    whatsapp:      l.whatsapp ?? l.phone ?? null,
-    source:        l.source  ?? 'Manual',
-    // ✅ Normalise status to PascalCase so dropdown always matches
-    status:        normalizeStatus(l.status),
-    note:          l.message ?? l.note ?? null,
-    message:       l.message,
-    assigned_to:   l.assignedTo ?? l.assigned_to ?? null,
-    followup_date: l.followUp?.date
-      ? l.followUp.date.split('T')[0]
-      : (l.followup_date ?? null),
-    followup_note: l.followUp?.message ?? l.followup_note ?? null,
-    followup_done: l.followUp?.active === false || l.followup_done === true,
-    followUp:      l.followUp,
-    created_at:    l.createdAt  ?? l.created_at  ?? '',
-    updated_at:    l.updatedAt  ?? l.updated_at  ?? '',
-    createdAt:     l.createdAt,
-  }))
-
-  return { data, count }
-}
-
-// ── Helper (copy this near the top of api.ts if not already there) ────────────
-function normalizeStatus(raw: string | undefined): import('@/types').LeadStatus {
-  if (!raw) return 'New'
-  const map: Record<string, import('@/types').LeadStatus> = {
-    new:        'New',
-    contacted:  'Contacted',
-    interested: 'Interested',
-    closed:     'Closed',
-    lost:       'Lost',
+  return {
+    data:  list.map(mapLead),
+    count,
   }
-  return map[raw.toLowerCase()] ?? (raw as import('@/types').LeadStatus)
 }
-
 
 // ════════════════════════════════════════════════════════════════════════════
 // ✅ FIX #5 — scheduleFollowUp

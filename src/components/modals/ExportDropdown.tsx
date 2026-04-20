@@ -123,16 +123,13 @@ export default function ExportDropdown() {
   const handleExport = async (filter: ExportFilter) => {
     setLoading(true)
     try {
-      const data = await fetchLeadsForExport(filter)
-      if (!data || data.length === 0) {
-        toast.error(`Koi ${filter === 'all' ? '' : filter + ' '}lead nahi mili export ke liye`)
-        return
-      }
-      exportLeads(data, fmt)
-      toast.success(`${data.length} leads export ho rahe hain (${fmt.toUpperCase()})…`)
+      await downloadLeads(filter, fmt)
+  
+      toast.success(`Leads download (${fmt.toUpperCase()})`)
       setOpen(false)
+  
     } catch (err: any) {
-      toast.error('Export fail ho gaya: ' + (err.message || 'Unknown error'))
+      toast.error('Export fail: ' + (err.message || 'Error'))
     } finally {
       setLoading(false)
     }
