@@ -9,7 +9,7 @@ import { CalendarClock, ChevronRight } from 'lucide-react'
 const COLUMNS: { status: LeadStatus; label: string; color: string; bg: string; dot: string }[] = [
   { status: 'New',        label: 'New',        color: 'text-blue-700',   bg: 'bg-blue-50',   dot: 'bg-blue-500'   },
   { status: 'Contacted',  label: 'Contacted',  color: 'text-amber-700',  bg: 'bg-amber-50',  dot: 'bg-amber-500'  },
-  { status: 'Interested', label: 'Interested', color: 'text-violet-700', bg: 'bg-violet-50', dot: 'bg-violet-500' },
+  //{ status: 'Interested', label: 'Interested', color: 'text-violet-700', bg: 'bg-violet-50', dot: 'bg-violet-500' },
   { status: 'Closed',     label: 'Closed Won', color: 'text-green-700',  bg: 'bg-green-50',  dot: 'bg-green-500'  },
   { status: 'Lost',       label: 'Lost',       color: 'text-red-600',    bg: 'bg-red-50',    dot: 'bg-red-500'    },
 ]

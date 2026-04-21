@@ -326,11 +326,18 @@ export async function readSpreadsheet(file: File): Promise<ImportResult> {
 // ─── Fetch leads for export (from REST API) ───────────────────────────────────
 export async function fetchLeadsForExport(filter: ExportFilter): Promise<Lead[]> {
   const token = localStorage.getItem('token') ?? ''
-  const status = filter !== 'all'
-    ? `&status=${encodeURIComponent(filter.toLowerCase())}` // backend lowercase
-    : ''
+  
+  const params = new URLSearchParams()
+  params.set('page', '1')
+  params.set('limit', '5000')
+  
+  // Status filter — backend lowercase mein store karta hai
+  if (filter !== 'all') {
+    params.set('status', filter.toLowerCase())
+  }
 
-  const res = await fetch(`${API_BASE}/leads/leads?page=1&limit=5000${status}`, {
+  // ✅ /admin/leads use karo — ye status filter support karta hai
+  const res = await fetch(`${API_BASE}/admin/leads?${params.toString()}`, {
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`,
@@ -339,31 +346,40 @@ export async function fetchLeadsForExport(filter: ExportFilter): Promise<Lead[]>
 
   if (!res.ok) throw new Error('Failed to fetch leads for export')
   const raw = await res.json()
-  const list = Array.isArray(raw) ? raw : raw.leads ?? []
+  
+  // /admin/leads response: { leads: [...], totalLeads: N }
+  const list = raw.leads ?? []
 
-  // Map backend → frontend Lead shape (minimal — only what export needs)
   return list.map((l: any): Lead => ({
-    id:           l._id ?? l.id ?? '',
-    _id:          l._id,
-    name:         l.fullName ?? l.name ?? 'Unknown',
-    fullName:     l.fullName,
-    email:        l.email  ?? null,
-    phone:        l.phone  ?? null,
-    whatsapp:     l.phone  ?? null,
-    source:       l.source ?? 'Manual',
-    status:       (l.status?.charAt(0).toUpperCase() + l.status?.slice(1)) as LeadStatus ?? 'New',
-    note:         l.message ?? null,
-    message:      l.message,
-    assigned_to:  null,
+    id:            l._id ?? l.id ?? '',
+    _id:           l._id,
+    name:          l.fullName ?? l.name ?? 'Unknown',
+    fullName:      l.fullName,
+    email:         l.email  ?? null,
+    phone:         l.phone  ?? null,
+    whatsapp:      l.phone  ?? null,
+    source:        l.source ?? 'Manual',
+    status:        normalizeStatusExport(l.status),
+    note:          l.message ?? null,
+    message:       l.message,
+    assigned_to:   null,
     followup_date: l.followUp?.date ? l.followUp.date.split('T')[0] : null,
     followup_note: l.followUp?.message ?? null,
-    followup_done: l.followUp?.active === false,
-    created_at:   l.createdAt ?? '',
-    updated_at:   l.updatedAt ?? l.createdAt ?? '',
-    createdAt:    l.createdAt,
+    followup_done: l.followUp != null && l.followUp.active === false,
+    created_at:    l.createdAt ?? '',
+    updated_at:    l.updatedAt ?? l.createdAt ?? '',
+    createdAt:     l.createdAt,
   }))
 }
 
+function normalizeStatusExport(raw: string | undefined): LeadStatus {
+  if (!raw) return 'New'
+  const map: Record<string, LeadStatus> = {
+    new: 'New', contacted: 'Contacted', interested: 'Interested',
+    closed: 'Closed', lost: 'Lost',
+  }
+  return map[raw.toLowerCase()] ?? 'New'
+}
 // ─── Export leads to file ─────────────────────────────────────────────────────
 export function exportLeads(leads: Lead[], fmt: ExportFormat): void {
   const filename = `leadflow-${format(new Date(), 'yyyy-MM-dd')}`

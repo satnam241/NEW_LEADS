@@ -1,5 +1,4 @@
 // src/lib/importExport.ts
-// ✅ Supabase removed — pure REST API (fetchLeads from api.ts)
 
 import * as XLSX from 'xlsx/xlsx.mjs'
 import Papa from 'papaparse'
@@ -29,25 +28,25 @@ export const EXPORT_OPTIONS: { key: ExportFilter; label: string }[] = [
 
 // ─── Column map for import ────────────────────────────────────────────────────
 const COL_MAP: Record<string, keyof LeadInsert> = {
-  'name':          'name',
-  'full name':     'name',
-  'fullname':      'name',
-  'email':         'email',
-  'phone':         'phone',
-  'mobile':        'phone',
-  'contact':       'phone',
-  'whatsapp':      'whatsapp',
-  'source':        'source',
-  'status':        'status',
-  'note':          'note',
-  'notes':         'note',
-  'remark':        'note',
-  'remarks':       'note',
-  'assigned to':   'assigned_to',
-  'followup date': 'followup_date',
-  'followup note': 'followup_note',
-  'follow up date':'followup_date',
-  'follow up note':'followup_note',
+  'name':           'name',
+  'full name':      'name',
+  'fullname':       'name',
+  'email':          'email',
+  'phone':          'phone',
+  'mobile':         'phone',
+  'contact':        'phone',
+  'whatsapp':       'whatsapp',
+  'source':         'source',
+  'status':         'status',
+  'note':           'note',
+  'notes':          'note',
+  'remark':         'note',
+  'remarks':        'note',
+  'assigned to':    'assigned_to',
+  'followup date':  'followup_date',
+  'followup note':  'followup_note',
+  'follow up date': 'followup_date',
+  'follow up note': 'followup_note',
 }
 
 const VALID_STATUSES: LeadStatus[] = ['New', 'Contacted', 'Interested', 'Closed', 'Lost']
@@ -98,8 +97,8 @@ export async function readSpreadsheet(file: File): Promise<ImportResult> {
 
     if (ext === 'csv' || ext === 'txt') {
       Papa.parse(file, {
-        header:        true,
-        skipEmptyLines: true,
+        header:          true,
+        skipEmptyLines:  true,
         transformHeader: h => h.trim().toLowerCase(),
         complete: result => resolve(parseRows(result.data as Record<string, any>[])),
         error:    err    => reject(err),
@@ -126,45 +125,65 @@ export async function readSpreadsheet(file: File): Promise<ImportResult> {
   })
 }
 
-// ─── Fetch leads for export (from REST API) ───────────────────────────────────
+// ─── Fetch leads for export ───────────────────────────────────────────────────
+// ✅ FIX: /leads/leads → /admin/leads (jo status filter support karta hai)
 export async function fetchLeadsForExport(filter: ExportFilter): Promise<Lead[]> {
   const token = localStorage.getItem('token') ?? ''
-  const status = filter !== 'all'
-    ? `&status=${encodeURIComponent(filter.toLowerCase())}` // backend lowercase
-    : ''
 
-  const res = await fetch(`${API_BASE}/leads/leads?page=1&limit=5000${status}`, {
+  const params = new URLSearchParams()
+  params.set('page',  '1')
+  params.set('limit', '5000')
+
+  // ✅ status filter — backend lowercase mein store karta hai
+  if (filter !== 'all') {
+    params.set('status', filter.toLowerCase())
+  }
+
+  const res = await fetch(`${API_BASE}/admin/leads?${params.toString()}`, {
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
+      Authorization:  `Bearer ${token}`,
     },
   })
 
   if (!res.ok) throw new Error('Failed to fetch leads for export')
-  const raw = await res.json()
-  const list = Array.isArray(raw) ? raw : raw.leads ?? []
 
-  // Map backend → frontend Lead shape (minimal — only what export needs)
+  const raw  = await res.json()
+  // ✅ /admin/leads response: { leads: [...], totalLeads: N }
+  const list = raw.leads ?? []
+
   return list.map((l: any): Lead => ({
-    id:           l._id ?? l.id ?? '',
-    _id:          l._id,
-    name:         l.fullName ?? l.name ?? 'Unknown',
-    fullName:     l.fullName,
-    email:        l.email  ?? null,
-    phone:        l.phone  ?? null,
-    whatsapp:     l.phone  ?? null,
-    source:       l.source ?? 'Manual',
-    status:       (l.status?.charAt(0).toUpperCase() + l.status?.slice(1)) as LeadStatus ?? 'New',
-    note:         l.message ?? null,
-    message:      l.message,
-    assigned_to:  null,
+    id:            l._id ?? l.id ?? '',
+    _id:           l._id,
+    name:          l.fullName ?? l.name ?? 'Unknown',
+    fullName:      l.fullName,
+    email:         l.email  ?? null,
+    phone:         l.phone  ?? null,
+    whatsapp:      l.phone  ?? null,
+    source:        l.source ?? 'Manual',
+    status:        normalizeStatusForExport(l.status),
+    note:          l.message ?? null,
+    message:       l.message,
+    assigned_to:   null,
     followup_date: l.followUp?.date ? l.followUp.date.split('T')[0] : null,
     followup_note: l.followUp?.message ?? null,
-    followup_done: l.followUp?.active === false,
-    created_at:   l.createdAt ?? '',
-    updated_at:   l.updatedAt ?? l.createdAt ?? '',
-    createdAt:    l.createdAt,
+    followup_done: l.followUp != null && l.followUp.active === false,
+    created_at:    l.createdAt ?? '',
+    updated_at:    l.updatedAt ?? l.createdAt ?? '',
+    createdAt:     l.createdAt,
   }))
+}
+
+function normalizeStatusForExport(raw: string | undefined): LeadStatus {
+  if (!raw) return 'New'
+  const map: Record<string, LeadStatus> = {
+    new:        'New',
+    contacted:  'Contacted',
+    interested: 'Interested',
+    closed:     'Closed',
+    lost:       'Lost',
+  }
+  return map[raw.toLowerCase()] ?? 'New'
 }
 
 // ─── Export leads to file ─────────────────────────────────────────────────────
@@ -179,13 +198,13 @@ export function exportLeads(leads: Lead[], fmt: ExportFormat): void {
 
   const rows = leads.map(l => [
     l.name,
-    l.email        ?? '',
-    l.phone        ?? '',
-    l.whatsapp     ?? '',
+    l.email         ?? '',
+    l.phone         ?? '',
+    l.whatsapp      ?? '',
     l.source,
     l.status,
-    l.note         ?? '',
-    l.assigned_to  ?? '',
+    l.note          ?? '',
+    l.assigned_to   ?? '',
     l.followup_date ?? '',
     l.followup_note ?? '',
     l.followup_done ? 'Yes' : 'No',

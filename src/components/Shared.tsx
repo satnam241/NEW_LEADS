@@ -118,16 +118,30 @@ export function Avatar({ name, size = 8 }: { name: string; size?: number }) {
   const initials = (name ?? '?').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
   const px = size * 4   // Tailwind size → px (size=8 → 32px)
 
-  return (
-    <div style={{
-      width: px, height: px, borderRadius: '50%',
-      background: palette.bg, color: palette.color,
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      fontSize: px < 28 ? 10 : 12, fontWeight: 700, flexShrink: 0,
-    }}>
-      {initials}
-    </div>
-  )
+ //const size = 32 // 👈 define karo (px ka replacement)
+
+const safePalette = palette || {
+  bg: '#e5e7eb',
+  color: '#374151'
+}
+
+return (
+  <div style={{
+    width: size,
+    height: size,
+    borderRadius: '50%',
+    background: safePalette.bg,   // ✅ safe
+    color: safePalette.color,     // ✅ safe
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: size < 28 ? 10 : 12,
+    fontWeight: 700,
+    flexShrink: 0,
+  }}>
+    {initials || '?'}
+  </div>
+)
 }
 
 // ─── ContactButtons ───────────────────────────────────────────────────────────

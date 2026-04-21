@@ -100,7 +100,6 @@
 // }
 
 // src/components/modals/ExportDropdown.tsx
-
 import { useState, useRef, useEffect } from 'react'
 import { Download, ChevronDown, FileSpreadsheet, FileText, Loader2 } from 'lucide-react'
 import { EXPORT_OPTIONS, exportLeads, fetchLeadsForExport, type ExportFilter, type ExportFormat } from '@/lib/importExport'
@@ -120,14 +119,14 @@ export default function ExportDropdown() {
     return () => document.removeEventListener('mousedown', handler)
   }, [open])
 
+  // ✅ FIX: downloadLeads → fetchLeadsForExport + exportLeads
   const handleExport = async (filter: ExportFilter) => {
     setLoading(true)
     try {
-      await downloadLeads(filter, fmt)
-  
-      toast.success(`Leads download (${fmt.toUpperCase()})`)
+      const leads = await fetchLeadsForExport(filter)  // backend se fetch
+      exportLeads(leads, fmt)                           // file download
+      toast.success(`${leads.length} leads download ho gaye (${fmt.toUpperCase()})`)
       setOpen(false)
-  
     } catch (err: any) {
       toast.error('Export fail: ' + (err.message || 'Error'))
     } finally {
@@ -178,7 +177,7 @@ export default function ExportDropdown() {
             </div>
           </div>
 
-          {/* Options */}
+          {/* Export options */}
           <div style={{ padding: '4px 0' }}>
             {EXPORT_OPTIONS.map(opt => (
               <button
@@ -187,10 +186,12 @@ export default function ExportDropdown() {
                 onClick={() => handleExport(opt.key as ExportFilter)}
                 disabled={loading}
               >
+                {loading ? <Loader2 size={11} className="animate-spin" /> : null}
                 {opt.label}
               </button>
             ))}
           </div>
+
         </div>
       )}
     </div>

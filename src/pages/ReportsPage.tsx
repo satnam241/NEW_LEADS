@@ -1,131 +1,3 @@
-// import { useState } from 'react'
-// import { format } from 'date-fns'
-// import { Download, AlertCircle } from 'lucide-react'
-// import { useDailyReport, useStats } from '@/hooks/useLeads'
-
-// export default function ReportsPage() {
-//   const today = format(new Date(), 'yyyy-MM-dd')
-//   const [date, setDate] = useState(today)
-
-//   const { data: report } = useDailyReport(date)
-//   const { data: stats } = useStats()
-
-//   const newLeads = report?.newLeads ?? []
-//   const updatedLeads = report?.updatedLeads ?? []
-//   const followups = report?.followups ?? []
-
-//   const getCount = (status: string) =>
-//     [...newLeads, ...updatedLeads].filter(l => l.status === status).length
-
-//   const getSourceCount = (src: string) =>
-//     [...newLeads, ...updatedLeads].filter(l => l.source === src).length
-
-//   // ✅ CLEAN DOWNLOAD (CSV — FAST + RELIABLE)
-//   const downloadReport = () => {
-//     const rows = [
-//       ['Name', 'Status', 'Source', 'Phone'],
-//       ...[...newLeads, ...updatedLeads].map(l => [
-//         l.name, l.status, l.source, l.phone
-//       ])
-//     ]
-
-//     const csv = rows.map(r => r.join(',')).join('\n')
-
-//     const blob = new Blob([csv], { type: 'text/csv' })
-//     const a = document.createElement('a')
-//     a.href = URL.createObjectURL(blob)
-//     a.download = `report-${date}.csv`
-//     a.click()
-//   }
-
-//   return (
-//     <div style={{ display:'flex', flexDirection:'column', gap:20 }}>
-
-//       {/* HEADER */}
-//       <div className="page-header">
-//         <div>
-//           <h1 className="page-title">Daily Report</h1>
-//           <p className="page-sub">Track performance and activities</p>
-//         </div>
-
-//         <div style={{ display:'flex', gap:8, alignItems:'center', flexWrap:'wrap' }}>
-//           <input
-//             type="date"
-//             className="input-base"
-//             value={date}
-//             max={today}
-//             onChange={e => setDate(e.target.value)}
-//           />
-
-//           <button className="btn-primary" onClick={downloadReport}>
-//             <Download size={14} /> Download Report
-//           </button>
-//         </div>
-//       </div>
-
-//       {/* STATS */}
-//       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))', gap:14 }}>
-//         <StatCard title="New Today" value={newLeads.length} />
-//         <StatCard title="Total Leads" value={stats?.total ?? 0} />
-//         <StatCard title="Overdue Follow-ups" value={followups.length} />
-//         <StatCard title="Closed Deals" value={getCount('Closed')} />
-//       </div>
-
-//       {/* PIPELINE */}
-//       <div className="card" style={{ padding:18 }}>
-//         <h3 style={{ fontSize:14, fontWeight:600, marginBottom:10 }}>Pipeline Status</h3>
-
-//         {['New','Contacted','Interested','Closed','Lost'].map(s => (
-//           <div key={s} style={{ display:'flex', justifyContent:'space-between', padding:'6px 0' }}>
-//             <span style={{ color:'#94a3b8' }}>{s}</span>
-//             <span style={{ fontWeight:600, color: s === 'Lost' ? '#ef4444' : '#38bdf8' }}>
-//               {getCount(s)}
-//             </span>
-//           </div>
-//         ))}
-//       </div>
-
-//       {/* SOURCES */}
-//       <div className="card" style={{ padding:18 }}>
-//         <h3 style={{ fontSize:14, fontWeight:600, marginBottom:10 }}>Lead Sources</h3>
-
-//         {['Meta Ads','Manual','Imported'].map(s => (
-//           <div key={s} style={{ display:'flex', justifyContent:'space-between', padding:'6px 0' }}>
-//             <span style={{ color:'#94a3b8' }}>{s}</span>
-//             <span style={{ fontWeight:600 }}>{getSourceCount(s)}</span>
-//           </div>
-//         ))}
-//       </div>
-
-//       {/* ACTION ITEMS */}
-//       <div className="card" style={{ padding:18 }}>
-//         <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:8 }}>
-//           <AlertCircle size={14} color="#ef4444" />
-//           <h3 style={{ fontSize:14, fontWeight:600 }}>Action Items</h3>
-//         </div>
-
-//         <div style={{ fontSize:13, color:'#94a3b8' }}>
-//           <p>• {followups.length} leads need follow-up today</p>
-//           <p>• {getCount('Interested')} leads in negotiation stage</p>
-//         </div>
-//       </div>
-
-//     </div>
-//   )
-// }
-
-// // ✅ MATCHING YOUR EXISTING CARD STYLE
-// function StatCard({ title, value }: { title: string; value: number }) {
-//   return (
-//     <div className="card" style={{ padding:16 }}>
-//       <p style={{ fontSize:22, fontWeight:700 }}>{value}</p>
-//       <p style={{ fontSize:12, color:'#94a3b8', marginTop:4 }}>{title}</p>
-//     </div>
-//   )
-// }
-
-// src/pages/ReportsPage.tsx
-// ✅ FIXED: All counts from backend stats (PascalCase keys), all sources, accurate metrics
 
 import { useState } from 'react'
 import { format } from 'date-fns'
@@ -161,12 +33,12 @@ export default function ReportsPage() {
 
   // ✅ Source counts — from backend stats
   const bySource       = stats?.bySource ?? {}
-  const facebookCount  = bySource['facebook']  ?? bySource['Facebook']  ?? 0
-  const whatsappCount  = bySource['whatsapp']  ?? bySource['WhatsApp']  ?? 0
-  const metaAdsCount   = bySource['Meta Ads']  ?? bySource['meta ads']  ?? 0
-  const manualCount    = bySource['Manual']    ?? bySource['manual']    ?? 0
-  const importedCount  = bySource['Imported']  ?? bySource['imported']  ?? 0
-
+  const facebookCount  = bySource['facebook']     ?? 0
+  const whatsappCount  = bySource['whatsapp']     ?? 0  
+  const metaAdsCount   = bySource['Meta Ads']     ?? 0
+  const manualCount    = (bySource['Manual'] ?? 0) + (bySource['admin-manual'] ?? 0)  
+  const importedCount  = bySource['Imported']     ?? 0
+  
   // ✅ Follow-up metrics
   const todayFollowups   = stats?.todayFollowups   ?? todayFU.length
   const overdueFollowups = stats?.overdueFollowups ?? 0
@@ -237,7 +109,7 @@ export default function ReportsPage() {
           {[
             { label: 'New',        value: newCount,        color: '#0284c7', bg: '#f0f9ff' },
             { label: 'Contacted',  value: contactedCount,  color: '#d97706', bg: '#fffbeb' },
-            { label: 'Interested', value: interestedCount, color: '#7c3aed', bg: '#f5f3ff' },
+            //{ label: 'Interested', value: interestedCount, color: '#7c3aed', bg: '#f5f3ff' },
             { label: 'Closed',     value: closedCount,     color: '#16a34a', bg: '#f0fdf4' },
             { label: 'Lost',       value: lostCount,       color: '#dc2626', bg: '#fef2f2' },
           ].map(({ label, value, color, bg }) => (
