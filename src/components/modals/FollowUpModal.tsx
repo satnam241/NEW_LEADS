@@ -199,7 +199,7 @@ export default function FollowUpModal({ lead, open, onClose, onSave, isSaving }:
               style={{ width: 15, height: 15, accentColor: '#25d366' }}
             />
             <MessageCircle size={14} style={{ color: '#25d366' }} />
-            WhatsApp reminder bhejo
+            WhatsApp reminder 
           </label>
 
           {/* Mark done (only when editing existing follow-up) */}
@@ -216,7 +216,7 @@ export default function FollowUpModal({ lead, open, onClose, onSave, isSaving }:
                 onChange={set('followup_done')}
                 style={{ width: 15, height: 15, accentColor: '#16a34a' }}
               />
-              ✅ Follow-up done mark karo
+              ✅ Follow-up done 
             </label>
           )}
 
@@ -252,7 +252,7 @@ export default function FollowUpModal({ lead, open, onClose, onSave, isSaving }:
           >
             {isSaving
               ? <><Loader2 size={14} className="animate-spin" /> Saving…</>
-              : isEditing ? '✅ Update Follow-up' : '📅 Schedule'
+              : isEditing ? ' Update Follow-up' : ' Schedule'
             }
           </button>
         </div>

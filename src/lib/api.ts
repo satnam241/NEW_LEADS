@@ -31,7 +31,6 @@ function authHeaders(): Record<string, string> {
   }
 }
 
-// ─── Response Handler ────────────────────────────────────────────────────────
 async function handleResponse<T>(res: Response): Promise<T> {
   // 401 → token expired/invalid → logout
   if (res.status === 401) {
@@ -46,12 +45,6 @@ async function handleResponse<T>(res: Response): Promise<T> {
   return data as T
 }
 
-// ════════════════════════════════════════════════════════════════════════════
-// ── MAPPERS ──────────────────────────────────────────────────────────────────
-// ════════════════════════════════════════════════════════════════════════════
-
-// Backend status values: "new" | "contacted" | "closed" | "converted"
-// Frontend status values: "New" | "Contacted" | "Interested" | "Closed" | "Lost"
 function mapStatus(s: string): Lead['status'] {
   const map: Record<string, Lead['status']> = {
     new:        'New',
@@ -60,7 +53,6 @@ function mapStatus(s: string): Lead['status'] {
     converted:  'Closed',
     closed:     'Closed',
     lost:       'Lost',
-    // pass-through (already capitalised – should not normally happen)
     New:        'New',
     Contacted:  'Contacted',
     Interested: 'Interested',
@@ -74,18 +66,13 @@ function unmapStatus(s: Lead['status']): string {
   const map: Record<string, string> = {
     New:        'new',
     Contacted:  'contacted',
-    Interested: 'contacted',  // backend enum doesn't have "interested"
+    Interested: 'contacted',
     Closed:     'closed',
-    Lost:       'lost',  // closest backend value
+    Lost:       'lost',  
   }
   return map[s] ?? 'new'
 }
 
-// Raw backend lead → typed frontend Lead
-// NOTE: getLeadsController selects only: name,email,phone,source,followUp,createdAt
-//       adminGetLeads returns full document
-//       createLeadController returns full document inside { success, data }
-// Raw backend lead → typed frontend Lead
 export function mapLead(raw: any): Lead {
   const followUpRaw = raw.followUp
 
@@ -149,11 +136,6 @@ export function mapLead(raw: any): Lead {
   }
 }
 
-// ════════════════════════════════════════════════════════════════════════════
-// ── AUTH ─────────────────────────────────────────────────────────────────────
-// ════════════════════════════════════════════════════════════════════════════
-
-/** POST /admin/login  →  { success, token, admin: { id, email } } */
 export async function adminLogin(creds: AuthCredentials): Promise<AuthResponse> {
   const res = await fetch(`${API_BASE}/admin/login`, {
     method:  'POST',
@@ -161,7 +143,6 @@ export async function adminLogin(creds: AuthCredentials): Promise<AuthResponse> 
     body:    JSON.stringify(creds),
   })
   const data = await handleResponse<any>(res)
-  // Token expires in 1h (backend). Store it.
   localStorage.setItem('token', data.token)
   return data
 }
@@ -190,11 +171,7 @@ export async function forgotPassword(email: string): Promise<{ message: string }
   return handleResponse(res)
 }
 
-/**
- * POST /admin/reset-password
- * Backend: changePasswordLoggedIn → reads token from Authorization header,
- * expects { currentPassword, newPassword }
- */
+
 export async function resetPassword(payload: {
   currentPassword: string
   newPassword: string
@@ -207,10 +184,7 @@ export async function resetPassword(payload: {
   return handleResponse(res)
 }
 
-/**
- * GET /admin/me
- * Backend: adminGetProfile → returns { _id, name } (no email in response!)
- */
+
 export async function getAdminProfile(): Promise<{
   _id: string
   name: string
@@ -224,71 +198,9 @@ export function adminLogout(): void {
   localStorage.removeItem('token')
 }
 
-// ════════════════════════════════════════════════════════════════════════════
-// ── LEADS  (leads.route.ts → /leads/*) ───────────────────────────────────────
-// ════════════════════════════════════════════════════════════════════════════
 
 const PAGE_SIZE = 20
 
-/**
- * GET /leads/leads
- *
- * Backend getLeadsController response shape:
- * {
- *   data: Lead[],
- *   pagination: { total, page, limit, totalPages }
- * }
- *
- * NOTE: controller selects only name,email,phone,source,followUp,createdAt
- * NOTE: supports query params: page, limit, email, phone, source, followupFilter
- * NOTE: does NOT support: search, status, startDate, endDate (use admin route for those)
- */
-// export async function fetchLeads(
-//   filters: LeadFilters,
-//   page: number,
-//   pageSize = PAGE_SIZE
-// ): Promise<{ data: Lead[]; count: number }> {
-//   const q = new URLSearchParams()
-//   q.set('page',  String(page))
-//   q.set('limit', String(pageSize))
-
-//   // Backend supports: email, phone, source, followupFilter
-//   if (filters.source) q.set('source', filters.source)
-
-//   // search → try matching by phone if it looks like a number, else email
-//   if (filters.search?.trim()) {
-//     const s = filters.search.trim()
-//     if (/^\+?[\d\s-]{7,}$/.test(s)) {
-//       q.set('phone', s)
-//     } else if (s.includes('@')) {
-//       q.set('email', s)
-//     }
-//     // partial name search not supported by getLeadsController
-//   }
-
-//   const res = await fetch(`${API_BASE}/leads/leads?${q}`, { headers: authHeaders() })
-//   if (!res.ok) {
-//     if (res.status === 401) {
-//       localStorage.removeItem('token')
-//       window.location.href = '/login'
-//       throw new Error('Unauthorized')
-//     }
-//     throw new Error('Failed to fetch leads')
-//   }
-
-//   const raw = await res.json()
-//   // Shape: { data: [...], pagination: { total, ... } }
-//   const rawLeads: any[] = Array.isArray(raw) ? raw : raw.data ?? []
-//   const count = raw.pagination?.total ?? rawLeads.length
-
-//   return { data: rawLeads.map(mapLead), count }
-// }
-
-/**
- * POST /leads/leads
- *
- * Backend response: { success: true, data: Lead }
- */
 export async function createLead(lead: LeadInsert): Promise<Lead> {
   const body: any = {
     fullName: lead.name,
@@ -317,15 +229,11 @@ export async function createLead(lead: LeadInsert): Promise<Lead> {
   if (!res.ok) throw new Error('Failed to create lead')
 
   const data = await res.json()
-  // Response: { success: true, data: {...} }
+ 
   return mapLead(data.data ?? data.lead ?? data)
 }
 
-/**
- * PUT /leads/leads/:id
- *
- * Backend updateLeadController – accepts full lead fields
- */
+
 export async function updateLead(id: string, updates: LeadUpdate): Promise<Lead> {
   const body: any = {}
   if (updates.name   !== undefined) body.fullName = updates.name
@@ -335,8 +243,6 @@ export async function updateLead(id: string, updates: LeadUpdate): Promise<Lead>
   if (updates.status !== undefined) body.status   = unmapStatus(updates.status as Lead['status'])
   if (updates.note   !== undefined) body.message  = updates.note
  
-  // ❌ followUp block HATAO — ye race condition ka cause tha
-  // followUp sirf scheduleFollowUp() se update hoga
  
   const res = await fetch(`${API_BASE}/leads/leads/${id}`, {
     method:  'PUT',
@@ -348,9 +254,7 @@ export async function updateLead(id: string, updates: LeadUpdate): Promise<Lead>
   return mapLead(data.lead ?? data.data ?? data)
 }
 
-/**
- * DELETE /admin/leads/:id  (soft-delete, adminAuth protected)
- */
+
 export async function deleteLead(id: string): Promise<void> {
   const res = await fetch(`${API_BASE}/admin/leads/${id}`, {
     method:  'DELETE',
@@ -359,7 +263,6 @@ export async function deleteLead(id: string): Promise<void> {
   if (!res.ok) throw new Error('Failed to delete lead')
 }
 
-/** PATCH /leads/leads/:id/restore */
 export async function restoreLead(id: string): Promise<void> {
   const res = await fetch(`${API_BASE}/leads/leads/${id}/restore`, {
     method:  'PATCH',
@@ -368,7 +271,6 @@ export async function restoreLead(id: string): Promise<void> {
   if (!res.ok) throw new Error('Failed to restore lead')
 }
 
-/** PATCH /leads/leads/bulk-delete */
 export async function bulkDeleteLeads(ids: string[]): Promise<void> {
   const res = await fetch(`${API_BASE}/leads/leads/bulk-delete`, {
     method:  'PATCH',
@@ -387,111 +289,6 @@ export async function bulkRestoreLeads(ids: string[]): Promise<void> {
   })
   if (!res.ok) throw new Error('Failed to bulk restore leads')
 }
-
-// ════════════════════════════════════════════════════════════════════════════
-// ── STATS ─────────────────────────────────────────────────────────────────────
-// ════════════════════════════════════════════════════════════════════════════
-
-/**
- * fetchStats – uses /admin/leads which:
- *   • requires adminAuth (token in header) ✅
- *   • returns { success, leads, totalLeads, newLeadsCount, contactedCount, convertedCount }
- *   • NOTE: hardcoded limit=10 in backend, so we paginate to get all leads for accurate stats
- *
- * Strategy: fetch page 1 to get totalLeads count, then derive stats from
- * the backend-provided counts (newLeadsCount, contactedCount, convertedCount)
- * so we don't need to fetch all 1000 leads.
-//  */
-// export async function fetchStats(): Promise<LeadStats> {
-//   try {
-//     const token = localStorage.getItem('token')
-//     if (!token) {
-//       window.location.href = '/login'
-//       throw new Error('No auth token')
-//     }
-
-//     const headers: Record<string, string> = {
-//       'Content-Type': 'application/json',
-//       Authorization:  `Bearer ${token}`,
-//     }
-
-//     // Fetch page 1 – gives us counts without pulling all docs
-//     const res = await fetch(`${API_BASE}/admin/leads?page=1&limit=10`, { headers })
-
-//     if (res.status === 401) {
-//       localStorage.removeItem('token')
-//       window.location.href = '/login'
-//       throw new Error('Unauthorized')
-//     }
-
-//     if (!res.ok) throw new Error('Failed to fetch stats')
-
-//     const raw = await res.json()
-
-//     // Backend returns these aggregated counts directly — use them!
-//     const totalLeads     = raw.totalLeads      ?? 0
-//     const newLeadsCount  = raw.newLeadsCount   ?? 0
-//     const contactedCount = raw.contactedCount  ?? 0
-//     const convertedCount = raw.convertedCount  ?? 0
-
-//     const byStatus: Record<string, number> = {
-//       New:       newLeadsCount,
-//       Contacted: contactedCount,
-//       Closed:    convertedCount,
-//     }
-    
-
-//     const bySource: Record<string, number> = {}
-
-//     // For followup stats, use the dedicated followup endpoints (more accurate)
-//     let todayFollowups  = 0
-//     let overdueFollowups = 0
-
-//     try {
-//       const [dueRes, overdueRes] = await Promise.all([
-//         fetch(`${API_BASE}/followup/due`,     { headers }),
-//         fetch(`${API_BASE}/followup/overdue`, { headers }),
-//       ])
-
-//       if (dueRes.ok) {
-//         const dueData = await dueRes.json()
-//         todayFollowups = (dueData.data ?? []).length
-//       }
-
-//       if (overdueRes.ok) {
-//         const overdueData = await overdueRes.json()
-//         overdueFollowups = (overdueData.data ?? []).length
-//       }
-//     } catch {
-//       // non-critical, leave as 0
-//     }
-
-//     // thisMonth: use totalLeads as approximation (backend doesn't return monthly count)
-//     // For accurate monthly count we'd need a dedicated endpoint
-//     const thisMonth = totalLeads
-
-//     return {
-//       total:    totalLeads,
-//       byStatus,
-//       bySource,
-//       thisMonth,
-//       todayFollowups,
-//       overdueFollowups,
-//     }
-//   } catch (error) {
-//     console.error('fetchStats error:', error)
-//     return {
-//       total:            0,
-//       byStatus:         {},
-//       bySource:         {},
-//       thisMonth:        0,
-//       todayFollowups:   0,
-//       overdueFollowups: 0,
-//     }
-//   }
-// }
-
-// api.ts — sirf yahi function badlo
 export async function fetchStats(): Promise<LeadStats> {
   try {
     const token = localStorage.getItem('token')
@@ -524,11 +321,8 @@ export async function fetchStats(): Promise<LeadStats> {
       Lost:      lostCount,
     }
 
-    // ✅ Source counts — saare leads fetch karke client side count karo
-    // Backend /admin/leads me bySource nahi hai isliye alag se fetch karte hain
     const bySource: Record<string, number> = {}
     try {
-      // Sirf source field chahiye — limit 5000 taaki sab aa jayein
       const srcRes = await fetch(`${API_BASE}/admin/leads?page=1&limit=5000`, { headers })
       if (srcRes.ok) {
         const srcData = await srcRes.json()
@@ -539,7 +333,7 @@ export async function fetchStats(): Promise<LeadStats> {
         }
       }
     } catch {
-      // non-critical
+      
     }
 
     let todayFollowups   = 0
@@ -567,18 +361,7 @@ export async function fetchStats(): Promise<LeadStats> {
     return { total: 0, byStatus: {}, bySource: {}, thisMonth: 0, todayFollowups: 0, overdueFollowups: 0 }
   }
 }
-// ════════════════════════════════════════════════════════════════════════════
-// ── FOLLOW-UPS  (/followup/*) ─────────────────────────────────────────────────
-// ════════════════════════════════════════════════════════════════════════════
 
-/**
- * All followup endpoints return: { success: true, data: Lead[] }
- *
- * GET /followup/due      → today's follow-ups      (no adminAuth on this route!)
- * GET /followup/overdue  → overdue follow-ups       (no adminAuth on this route!)
- * GET /followup/         → all active follow-ups    (adminAuth)
- * GET /followup/upcoming → upcoming follow-ups      (adminAuth)
- */
 export async function fetchFollowups(
   filter: 'today' | 'overdue' | 'upcoming' | 'all'
 ): Promise<Lead[]> {
@@ -600,26 +383,6 @@ export async function fetchFollowups(
   return list.map(mapLead)
 }
 
-/**
- * POST /followup/leads/:id/follow-up
- * Body: { recurrence?, date?, message?, whatsappOptIn? }
- */
-// export async function scheduleFollowUp(
-//   id: string,
-//   payload: FollowUpPayload
-// ): Promise<void> {
-//   const res = await fetch(`${API_BASE}/followup/leads/${id}/follow-up`, {
-//     method:  'POST',
-//     headers: authHeaders(),
-//     body:    JSON.stringify(payload),
-//   })
-//   if (!res.ok) throw new Error('Failed to schedule follow-up')
-// }
-
-/**
- * DELETE /followup/leads/:id/follow-up  — sets active:false, clears date
- */
-
 export async function markFollowupDone(id: string): Promise<void> {
   const res = await fetch(`${API_BASE}/followup/leads/${id}/follow-up`, {
     method:  'DELETE',
@@ -628,11 +391,7 @@ export async function markFollowupDone(id: string): Promise<void> {
   if (!res.ok) throw new Error('Failed to cancel follow-up')
 }
 
-// ════════════════════════════════════════════════════════════════════════════
-// ── ACTIVITIES  (/activities/*) ───────────────────────────────────────────────
-// ════════════════════════════════════════════════════════════════════════════
 
-/** GET /activities/:userId  (optional ?startDate=&endDate=) */
 export async function fetchActivities(
   userId: string,
   opts?: { startDate?: string; endDate?: string }
@@ -678,15 +437,6 @@ export async function deleteActivity(id: string): Promise<void> {
   })
   if (!res.ok) throw new Error('Failed to delete activity')
 }
-
-// ════════════════════════════════════════════════════════════════════════════
-// ── MESSAGES  (/messages/:leadId/send-message) ────────────────────────────────
-// ════════════════════════════════════════════════════════════════════════════
-
-/**
- * POST /messages/:leadId/send-message
- * Body: { messageType?: "email"|"whatsapp"|"both", message?, adminEmail? }
- */
 export async function sendMessage(
   leadId: string,
   payload: SendMessagePayload
@@ -698,16 +448,6 @@ export async function sendMessage(
   })
   return handleResponse(res)
 }
-
-// ════════════════════════════════════════════════════════════════════════════
-// ── REMINDERS  (/admin/reminders/*) ───────────────────────────────────────────
-// ════════════════════════════════════════════════════════════════════════════
-
-/**
- * GET /admin/reminders
- * Returns: { success: true, leads: [...] }
- * Leads with reminderCount > 0 && <= 5 and status !== "closed"
- */
 export async function fetchReminderLeads(): Promise<ReminderLead[]> {
   const res = await fetch(`${API_BASE}/admin/reminders`, { headers: authHeaders() })
   if (!res.ok) throw new Error('Failed to fetch reminders')
@@ -715,25 +455,16 @@ export async function fetchReminderLeads(): Promise<ReminderLead[]> {
   return data.leads ?? data ?? []
 }
 
-/**
- * GET /admin/reminders/count
- * Returns: { success: true, pendingReminders: number }
- * NOTE: backend field is `pendingReminders`, not `count`
- */
 export async function fetchReminderCount(): Promise<number> {
   const res = await fetch(`${API_BASE}/admin/reminders/count`, {
     headers: authHeaders(),
   })
   if (!res.ok) return 0
   const data = await res.json()
-  // Backend returns `pendingReminders`, not `count`
+  
   return data.pendingReminders ?? data.count ?? 0
 }
 
-/**
- * PUT /admin/reminders/contacted/:id
- * Sets lead status="contacted", reminderCount=0
- */
 export async function markAsContacted(id: string): Promise<void> {
   const res = await fetch(`${API_BASE}/admin/reminders/contacted/${id}`, {
     method:  'PUT',
@@ -742,15 +473,7 @@ export async function markAsContacted(id: string): Promise<void> {
   if (!res.ok) throw new Error('Failed to mark as contacted')
 }
 
-// ════════════════════════════════════════════════════════════════════════════
-// ── PIPELINE ──────────────────────────────────────────────────────────────────
-// ════════════════════════════════════════════════════════════════════════════
 
-/**
- * Fetch all leads for Kanban/pipeline view.
- * Uses /admin/leads with multiple pages to get all leads (backend limit=10 hardcoded).
- * Falls back to /leads/leads if admin route fails.
- */
 export async function fetchPipeline(): Promise<Lead[]> {
   try {
     // Get total count first
@@ -796,14 +519,7 @@ export async function fetchPipeline(): Promise<Lead[]> {
   }
 }
 
-// ════════════════════════════════════════════════════════════════════════════
-// ── DAILY REPORT ──────────────────────────────────────────────────────────────
-// ════════════════════════════════════════════════════════════════════════════
 
-/**
- * Daily report – fetches all leads via /admin/leads and filters client-side.
- * Backend /admin/stats/daily returns only aggregate counts per day (not full leads).
- */
 export async function fetchDailyReport(date: string): Promise<DailyReport> {
   // Collect all leads (paginated)
   const allLeads = await fetchPipeline()
@@ -820,14 +536,7 @@ export async function fetchDailyReport(date: string): Promise<DailyReport> {
   }
 }
 
-// ════════════════════════════════════════════════════════════════════════════
-// ── IMPORT / EXPORT ────────────────────────────────────────────────────────────
-// ════════════════════════════════════════════════════════════════════════════
 
-/**
- * POST /admin/import-leads  (multipart/form-data, field name: "file")
- * Returns: { message: string, total: number, sample: any }
- */
 export async function importLeadsFile(
   file: File
 ): Promise<{ success: boolean; message?: string; error?: string }> {

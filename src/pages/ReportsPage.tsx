@@ -104,7 +104,7 @@ export default function ReportsPage() {
 
         <div className="card" style={{ padding: 18 }}>
           <h3 style={{ fontSize: 14, fontWeight: 700, color: '#0f172a', marginBottom: 14 }}>
-            📊 Lead Status Breakdown
+            Lead Status Breakdown
           </h3>
           {[
             { label: 'New',        value: newCount,        color: '#0284c7', bg: '#f0f9ff' },
@@ -115,7 +115,7 @@ export default function ReportsPage() {
           ].map(({ label, value, color, bg }) => (
             <div key={label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #f8fafc' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ width: 8, height: 8, borderRadius: '50%', background: color, display: 'inline-block' }} />
+               
                 <span style={{ fontSize: 13, color: '#475569' }}>{label}</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -134,14 +134,14 @@ export default function ReportsPage() {
         {/* ── SOURCE BREAKDOWN ─────────────────────────────────────────── */}
         <div className="card" style={{ padding: 18 }}>
           <h3 style={{ fontSize: 14, fontWeight: 700, color: '#0f172a', marginBottom: 14 }}>
-            📣 Lead Sources
+             Lead Sources
           </h3>
           {[
-            { label: '📘 Facebook',  value: facebookCount,  color: '#4c6ef5' },
-            { label: '💬 WhatsApp',  value: whatsappCount,  color: '#16a34a' },
-            { label: '🎯 Meta Ads',  value: metaAdsCount,   color: '#3b5bdb' },
-            { label: '✍️ Manual',    value: manualCount,    color: '#475569' },
-            { label: '📥 Imported',  value: importedCount,  color: '#0f766e' },
+            { label: ' Facebook',  value: facebookCount,  color: '#4c6ef5' },
+            { label: ' WhatsApp',  value: whatsappCount,  color: '#16a34a' },
+            { label: ' Meta Ads',  value: metaAdsCount,   color: '#3b5bdb' },
+            { label: ' Manual',    value: manualCount,    color: '#475569' },
+            { label: ' Imported',  value: importedCount,  color: '#0f766e' },
           ].map(({ label, value, color }) => (
             <div key={label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #f8fafc' }}>
               <span style={{ fontSize: 13, color: '#475569' }}>{label}</span>
@@ -158,7 +158,7 @@ export default function ReportsPage() {
       <div className="card" style={{ padding: 18 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 14 }}>
           <AlertCircle size={14} color="#ef4444" />
-          <h3 style={{ fontSize: 14, fontWeight: 700, color: '#0f172a' }}>⚡ Activity Metrics</h3>
+          <h3 style={{ fontSize: 14, fontWeight: 700, color: '#0f172a' }}> Activity Metrics</h3>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))', gap: 10 }}>
           <MetricRow label="Today's Follow-ups"      value={todayFollowups}    color="#d97706" />
@@ -173,7 +173,7 @@ export default function ReportsPage() {
       {followups.length > 0 && (
         <div className="card" style={{ padding: 18 }}>
           <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 12 }}>
-            📅 Follow-ups for {format(new Date(date), 'MMM d, yyyy')} ({followups.length})
+            Follow-ups for {format(new Date(date), 'MMM d, yyyy')} ({followups.length})
           </h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {followups.slice(0, 10).map(l => (

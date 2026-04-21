@@ -53,7 +53,7 @@ export default function FilterBar({
           <input
             className="input-base"
             style={{ paddingLeft: 32, height: 36, fontSize: 13 }}
-            placeholder="Search naam, phone, email…"
+            placeholder="Search name, phone, email…"
             value={filters.search}
             onChange={set('search')}
           />

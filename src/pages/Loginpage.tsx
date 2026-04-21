@@ -18,7 +18,7 @@ export default function LoginPage() {
     e.preventDefault()
     setError('')
     if (!form.email || !form.password) {
-      setError('Email aur password dono required hain')
+      setError('Email and password required ')
       return
     }
     setLoading(true)
@@ -90,7 +90,7 @@ export default function LoginPage() {
             <input
               type="email"
               className="input-base"
-              placeholder="admin@example.com"
+              
               value={form.email}
               onChange={set('email')}
               autoComplete="email"
@@ -107,7 +107,7 @@ export default function LoginPage() {
               <input
                 type={showPass ? 'text' : 'password'}
                 className="input-base"
-                placeholder="••••••••"
+                
                 value={form.password}
                 onChange={set('password')}
                 autoComplete="current-password"

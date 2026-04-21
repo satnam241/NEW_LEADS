@@ -1,6 +1,6 @@
 // src/lib/importExport.ts
+// ✅ XLSX dynamically loaded — sirf tab download hoga jab user import/export kare
 
-import * as XLSX from 'xlsx/xlsx.mjs'
 import Papa from 'papaparse'
 import { format } from 'date-fns'
 import type { Lead, LeadInsert, LeadStatus } from '@/types'
@@ -91,11 +91,12 @@ export function parseRows(rows: Record<string, any>[]): ImportResult {
 }
 
 // ─── Read spreadsheet file ────────────────────────────────────────────────────
+// ✅ XLSX dynamically imported — 424KB sirf tab load hoga jab file upload ho
 export async function readSpreadsheet(file: File): Promise<ImportResult> {
-  return new Promise((resolve, reject) => {
-    const ext = file.name.split('.').pop()?.toLowerCase()
+  const ext = file.name.split('.').pop()?.toLowerCase()
 
-    if (ext === 'csv' || ext === 'txt') {
+  if (ext === 'csv' || ext === 'txt') {
+    return new Promise((resolve, reject) => {
       Papa.parse(file, {
         header:          true,
         skipEmptyLines:  true,
@@ -103,30 +104,34 @@ export async function readSpreadsheet(file: File): Promise<ImportResult> {
         complete: result => resolve(parseRows(result.data as Record<string, any>[])),
         error:    err    => reject(err),
       })
-    } else {
-      const reader = new FileReader()
-      reader.onload = e => {
-        try {
-          const data = new Uint8Array(e.target!.result as ArrayBuffer)
-          const wb   = XLSX.read(data, { type: 'array' })
-          const ws   = wb.Sheets[wb.SheetNames[0]]
-          const rows = XLSX.utils.sheet_to_json(ws, { defval: '' }) as Record<string, any>[]
-          const normalized = rows.map(row =>
-            Object.fromEntries(Object.entries(row).map(([k, v]) => [k.trim().toLowerCase(), v]))
-          )
-          resolve(parseRows(normalized))
-        } catch (err) {
-          reject(err)
-        }
+    })
+  }
+
+  // ✅ Dynamic import — xlsx sirf yahan load hoga
+  const XLSX = await import('xlsx/xlsx.mjs')
+
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = e => {
+      try {
+        const data = new Uint8Array(e.target!.result as ArrayBuffer)
+        const wb   = XLSX.read(data, { type: 'array' })
+        const ws   = wb.Sheets[wb.SheetNames[0]]
+        const rows = XLSX.utils.sheet_to_json(ws, { defval: '' }) as Record<string, any>[]
+        const normalized = rows.map(row =>
+          Object.fromEntries(Object.entries(row).map(([k, v]) => [k.trim().toLowerCase(), v]))
+        )
+        resolve(parseRows(normalized))
+      } catch (err) {
+        reject(err)
       }
-      reader.onerror = () => reject(new Error('File read failed'))
-      reader.readAsArrayBuffer(file)
     }
+    reader.onerror = () => reject(new Error('File read failed'))
+    reader.readAsArrayBuffer(file)
   })
 }
 
 // ─── Fetch leads for export ───────────────────────────────────────────────────
-// ✅ FIX: /leads/leads → /admin/leads (jo status filter support karta hai)
 export async function fetchLeadsForExport(filter: ExportFilter): Promise<Lead[]> {
   const token = localStorage.getItem('token') ?? ''
 
@@ -134,7 +139,6 @@ export async function fetchLeadsForExport(filter: ExportFilter): Promise<Lead[]>
   params.set('page',  '1')
   params.set('limit', '5000')
 
-  // ✅ status filter — backend lowercase mein store karta hai
   if (filter !== 'all') {
     params.set('status', filter.toLowerCase())
   }
@@ -149,7 +153,6 @@ export async function fetchLeadsForExport(filter: ExportFilter): Promise<Lead[]>
   if (!res.ok) throw new Error('Failed to fetch leads for export')
 
   const raw  = await res.json()
-  // ✅ /admin/leads response: { leads: [...], totalLeads: N }
   const list = raw.leads ?? []
 
   return list.map((l: any): Lead => ({
@@ -187,7 +190,8 @@ function normalizeStatusForExport(raw: string | undefined): LeadStatus {
 }
 
 // ─── Export leads to file ─────────────────────────────────────────────────────
-export function exportLeads(leads: Lead[], fmt: ExportFormat): void {
+// ✅ async kiya — XLSX dynamic import ke liye
+export async function exportLeads(leads: Lead[], fmt: ExportFormat): Promise<void> {
   const filename = `leadflow-${format(new Date(), 'yyyy-MM-dd')}`
 
   const headers = [
@@ -213,12 +217,15 @@ export function exportLeads(leads: Lead[], fmt: ExportFormat): void {
   ])
 
   if (fmt === 'csv') {
+    // CSV ke liye XLSX zaruri nahi
     const csv = [headers, ...rows]
       .map(r => r.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(','))
       .join('\n')
     const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv' })
     downloadBlob(blob, filename + '.csv')
   } else {
+    // ✅ XLSX sirf xlsx export pe load hoga
+    const XLSX = await import('xlsx/xlsx.mjs')
     const wb = XLSX.utils.book_new()
     const ws = XLSX.utils.aoa_to_sheet([headers, ...rows])
     XLSX.utils.book_append_sheet(wb, ws, 'Leads')
