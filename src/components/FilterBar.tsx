@@ -3,7 +3,7 @@ import { Search, X, Calendar } from 'lucide-react'
 import type { LeadFilters, LeadStatus, LeadSource } from '@/types'
 
 // ✅ Interested removed
-const STATUSES: LeadStatus[] = ['New', 'Contacted','Interested', 'Closed', 'Lost']
+const STATUSES: LeadStatus[] = ['New', 'Contacted', 'Interested', 'Negotiation', 'Visitor', 'Closed', 'Lost']
 
 const SOURCES: { value: string; label: string }[] = [
   { value: 'facebook', label: 'Facebook'  },

@@ -1,58 +1,5 @@
-// export type LeadStatus = 'New' | 'Contacted' | 'Interested' | 'Closed' | 'Lost'
-// export type LeadSource = 'Meta Ads' | 'Manual' | 'Imported'
 
-// export interface Lead {
-//   id: string
-//   name: string
-//   email: string | null
-//   phone: string | null
-//   whatsapp: string | null
-//   source: LeadSource
-//   status: LeadStatus
-//   note: string | null
-//   assigned_to: string | null
-//   followup_date: string | null
-//   followup_note: string | null
-//   followup_done: boolean
-//   created_at: string
-//   updated_at: string
-// }
-
-// export type LeadInsert = Omit<Lead, 'id' | 'created_at' | 'updated_at'>
-// export type LeadUpdate = Partial<LeadInsert>
-
-// export interface Followup {
-//   id: string
-//   lead_id: string
-//   date: string
-//   note: string
-//   done: boolean
-//   created_at: string
-// }
-
-// export interface LeadFilters {
-//   search: string
-//   status: LeadStatus | ''
-//   source: LeadSource | ''
-//   dateFrom: string
-//   dateTo: string
-// }
-
-// export interface LeadStats {
-//   total: number
-//   byStatus: Record<string, number>
-//   bySource: Record<string, number>
-//   thisMonth: number
-//   todayFollowups: number
-//   overdueFollowups: number
-// }
-
-// ─── TYPES — mapped to backend MongoDB API ───────────────────────────────────
-// ─── types.ts — Frontend Types (mapped to MongoDB backend) ──────────────────
-
-// ── Enums ────────────────────────────────────────────────────────────────────
-
-export type LeadStatus = 'New' | 'Contacted' | 'Interested' | 'Closed' | 'Lost'
+export type LeadStatus = 'New' | 'Contacted' | 'Interested' | 'Negotiation' | 'Visitor' | 'Closed' | 'Lost'
 
 export type LeadSource = 'facebook' | 'whatsapp' | 'Manual' | 'Imported' | 'Meta Ads'
 
@@ -219,4 +166,22 @@ export interface ReminderLead {
   reminderCount: number
   lastReminderSent: string | null
   createdAt: string
+}
+export interface OverdueLead {
+  _id: string
+  fullName?: string
+  phone?: string
+  email?: string
+  status?: string
+  overdueLabel: string   // e.g. "2d overdue", "3h overdue"
+  overdueMs: number      // milliseconds overdue (sorting ke liye)
+  followUp?: {
+    date?: string
+    message?: string
+    whatsappOptIn?: boolean
+    overdueStatus?: 'pending' | 'acknowledged' | 'rescheduled' | 'resolved'
+    acknowledgedAt?: string
+    rescheduledAt?: string
+    resolvedAt?: string
+  }
 }

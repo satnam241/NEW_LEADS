@@ -464,7 +464,7 @@ export default function FollowupsPage() {
             {search ? 'No results found' : tab === 'overdue' ? 'No overdue follow-ups!' : tab === 'today' ? 'All Clear for Today!' : 'No follow-ups here'}
           </p>
           <p style={{ fontSize: 12, color: '#94a3b8' }}>
-            {search ? `"${search}" se koi follow-up match nahi hua.` : 'Is category mein koi follow-up nahi hai.'}
+            {search ? `"${search}" Nofollow-up matched ` : 'No follow-up in this category.'}
           </p>
         </div>
       ) : (

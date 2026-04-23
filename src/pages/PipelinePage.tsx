@@ -4,14 +4,15 @@ import { ContactButtons, Avatar } from '@/components/Shared'
 import LeadModal from '@/components/modals/LeadModal'
 import type { Lead, LeadStatus, LeadInsert } from '@/types'
 import { format } from 'date-fns'
-import { CalendarClock, ChevronRight } from 'lucide-react'
+import { CalendarClock } from 'lucide-react'
 
 const COLUMNS: { status: LeadStatus; label: string; color: string; bg: string; dot: string }[] = [
-  { status: 'New',        label: 'New',        color: 'text-blue-700',   bg: 'bg-blue-50',   dot: 'bg-blue-500'   },
-  { status: 'Contacted',  label: 'Contacted',  color: 'text-amber-700',  bg: 'bg-amber-50',  dot: 'bg-amber-500'  },
-  //{ status: 'Interested', label: 'Interested', color: 'text-violet-700', bg: 'bg-violet-50', dot: 'bg-violet-500' },
-  { status: 'Closed',     label: 'Closed Won', color: 'text-green-700',  bg: 'bg-green-50',  dot: 'bg-green-500'  },
-  { status: 'Lost',       label: 'Lost',       color: 'text-red-600',    bg: 'bg-red-50',    dot: 'bg-red-500'    },
+  { status: 'New',         label: 'New',         color: 'text-blue-700',   bg: 'bg-blue-50',   dot: 'bg-blue-500'   },
+  { status: 'Contacted',   label: 'Contacted',   color: 'text-amber-700',  bg: 'bg-amber-50',  dot: 'bg-amber-500'  },
+  { status: 'Negotiation', label: 'Negotiation', color: 'text-violet-700', bg: 'bg-violet-50', dot: 'bg-violet-500' },
+  { status: 'Visitor',     label: 'Visitor',     color: 'text-cyan-700',   bg: 'bg-cyan-50',   dot: 'bg-cyan-500'   },
+  { status: 'Closed',      label: 'Closed Won',  color: 'text-green-700',  bg: 'bg-green-50',  dot: 'bg-green-500'  },
+  { status: 'Lost',        label: 'Lost',        color: 'text-red-600',    bg: 'bg-red-50',    dot: 'bg-red-500'    },
 ]
 
 function LeadCard({ lead, onEdit }: { lead: Lead; onEdit: (l: Lead) => void }) {
@@ -76,7 +77,7 @@ export default function PipelinePage() {
       </div>
 
       {isLoading ? (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
           {COLUMNS.map(col => (
             <div key={col.status} className="space-y-2">
               <div className="h-8 bg-slate-100 rounded-lg animate-pulse" />
@@ -85,7 +86,7 @@ export default function PipelinePage() {
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 items-start">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 items-start">
           {COLUMNS.map(col => {
             const colLeads = byStatus(col.status)
             return (

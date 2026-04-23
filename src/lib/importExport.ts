@@ -1,5 +1,3 @@
-// src/lib/importExport.ts
-// ✅ XLSX dynamically loaded — sirf tab download hoga jab user import/export kare
 
 import Papa from 'papaparse'
 import { format } from 'date-fns'
@@ -21,9 +19,10 @@ export const EXPORT_OPTIONS: { key: ExportFilter; label: string }[] = [
   { key: 'all',        label: '📋 All Leads'        },
   { key: 'New',        label: '🔵 New Leads'         },
   { key: 'Contacted',  label: '🟡 Contacted Leads'   },
-  { key: 'Interested', label: '🟣 Interested Leads'  },
   { key: 'Closed',     label: '🟢 Closed Leads'      },
   { key: 'Lost',       label: '🔴 Lost Leads'        },
+  { key: 'Interested', label: ""},
+  
 ]
 
 // ─── Column map for import ────────────────────────────────────────────────────

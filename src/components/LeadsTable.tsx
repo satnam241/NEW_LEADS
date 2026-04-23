@@ -13,14 +13,17 @@ interface Props {
   onStatusChange?: (id: string, status: LeadStatus) => void
 }
 
-const STATUSES: LeadStatus[] = ['New', 'Contacted', 'Interested', 'Closed', 'Lost']
+// 🆕 Negotiation + Visitor added
+const STATUSES: LeadStatus[] = ['New', 'Contacted', 'Interested', 'Negotiation', 'Visitor', 'Closed', 'Lost']
 
 const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
-  New:        { bg: '#f0f9ff', color: '#0284c7' },
-  Contacted:  { bg: '#fffbeb', color: '#d97706' },
-  Interested: { bg: '#f5f3ff', color: '#7c3aed' },
-  Closed:     { bg: '#f0fdf4', color: '#16a34a' },
-  Lost:       { bg: '#fef2f2', color: '#dc2626' },
+  New:         { bg: '#f0f9ff', color: '#0284c7' },
+  Contacted:   { bg: '#fffbeb', color: '#d97706' },
+  Interested:  { bg: '#f5f3ff', color: '#7c3aed' },
+  Negotiation: { bg: '#fdf4ff', color: '#9333ea' }, // 🆕
+  Visitor:     { bg: '#ecfeff', color: '#0891b2' }, // 🆕
+  Closed:      { bg: '#f0fdf4', color: '#16a34a' },
+  Lost:        { bg: '#fef2f2', color: '#dc2626' },
 }
 
 const StatusSelect = React.memo(function StatusSelect({
@@ -56,10 +59,17 @@ const StatusSelect = React.memo(function StatusSelect({
         border: 'none', outline: 'none', cursor: 'pointer',
         background: colors.bg, color: colors.color,
         appearance: 'none', WebkitAppearance: 'none',
-        minWidth: 90,
+        minWidth: 100,
       }}
     >
-      {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+      {STATUSES.map(s => (
+        <option key={s} value={s} style={{
+          background: STATUS_COLORS[s]?.bg    ?? '#fff',
+          color:      STATUS_COLORS[s]?.color ?? '#374151',
+        }}>
+          {s}
+        </option>
+      ))}
     </select>
   )
 })
@@ -150,22 +160,18 @@ function LeadsTable({ leads, isLoading, onEdit, onDelete, onFollowUp, onStatusCh
                       </div>
                     </td>
 
-                    {/* Contact */}
                     <td className="tbody-cell hidden md:table-cell">
                       <ContactCell lead={lead} />
                     </td>
 
-                    {/* Source */}
                     <td className="tbody-cell" style={{ cursor: 'pointer' }} onClick={() => onEdit(lead)}>
                       <SourceBadge source={lead.source} />
                     </td>
 
-                    {/* Status */}
                     <td className="tbody-cell">
                       <StatusSelect lead={lead} onChange={onStatusChange} />
                     </td>
 
-                    {/* Follow-up date */}
                     <td className="tbody-cell hidden lg:table-cell" style={{ cursor: 'pointer' }} onClick={() => onEdit(lead)}>
                       {lead.followup_date ? (
                         <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
@@ -182,16 +188,12 @@ function LeadsTable({ leads, isLoading, onEdit, onDelete, onFollowUp, onStatusCh
                       )}
                     </td>
 
-                    {/* Added */}
                     <td className="tbody-cell hidden lg:table-cell" style={{ fontSize: 12, color: '#94a3b8', cursor: 'pointer' }} onClick={() => onEdit(lead)}>
                       {lead.created_at ? format(new Date(lead.created_at), 'MMM d') : '—'}
                     </td>
 
-                    {/* Actions — ISOLATED td, no event bubbling issue */}
                     <td className="tbody-cell" style={{ pointerEvents: 'all' }}>
                       <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-
-                        {/* Follow-up button */}
                         {onFollowUp && (
                           <button
                             type="button"
@@ -205,59 +207,35 @@ function LeadsTable({ leads, isLoading, onEdit, onDelete, onFollowUp, onStatusCh
                             }}
                             onMouseEnter={e => (e.currentTarget as HTMLButtonElement).style.background = '#f5f3ff'}
                             onMouseLeave={e => (e.currentTarget as HTMLButtonElement).style.background = lead.followUp?.active ? '#f5f3ff' : 'transparent'}
-                            onClick={(e) => {
-                              e.preventDefault()
-                              e.stopPropagation()
-                              onFollowUp(lead)
-                            }}
+                            onClick={e => { e.preventDefault(); e.stopPropagation(); onFollowUp(lead) }}
                           >
                             <CalendarClock size={13} />
                           </button>
                         )}
 
-                        {/* Edit button */}
                         <button
                           type="button"
                           title="Edit Lead"
-                          style={{
-                            padding: 5, borderRadius: 6, border: 'none',
-                            background: 'transparent', cursor: 'pointer', color: '#64748b',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          }}
+                          style={{ padding: 5, borderRadius: 6, border: 'none', background: 'transparent', cursor: 'pointer', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                           onMouseEnter={e => (e.currentTarget as HTMLButtonElement).style.background = '#eff4ff'}
                           onMouseLeave={e => (e.currentTarget as HTMLButtonElement).style.background = 'transparent'}
-                          onClick={(e) => {
-                            e.preventDefault()
-                            e.stopPropagation()
-                            onEdit(lead)
-                          }}
+                          onClick={e => { e.preventDefault(); e.stopPropagation(); onEdit(lead) }}
                         >
                           <Edit2 size={13} />
                         </button>
 
-                        {/* Delete button */}
                         <button
                           type="button"
                           title="Delete Lead"
-                          style={{
-                            padding: 5, borderRadius: 6, border: 'none',
-                            background: 'transparent', cursor: 'pointer', color: '#dc2626',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          }}
+                          style={{ padding: 5, borderRadius: 6, border: 'none', background: 'transparent', cursor: 'pointer', color: '#dc2626', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                           onMouseEnter={e => (e.currentTarget as HTMLButtonElement).style.background = '#fef2f2'}
                           onMouseLeave={e => (e.currentTarget as HTMLButtonElement).style.background = 'transparent'}
-                          onClick={(e) => {
-                            e.preventDefault()
-                            e.stopPropagation()
-                            onDelete(lead._id ?? lead.id)
-                          }}
+                          onClick={e => { e.preventDefault(); e.stopPropagation(); onDelete(lead._id ?? lead.id) }}
                         >
                           <Trash2 size={13} />
                         </button>
-
                       </div>
                     </td>
-
                   </tr>
                 )
               })}

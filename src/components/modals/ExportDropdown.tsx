@@ -24,7 +24,7 @@ export default function ExportDropdown() {
     try {
       const leads = await fetchLeadsForExport(filter)  // backend se fetch
       exportLeads(leads, fmt)                           // file download
-      toast.success(`${leads.length} leads download ho gaye (${fmt.toUpperCase()})`)
+      toast.success(`${leads.length} leads download complete(${fmt.toUpperCase()})`)
       setOpen(false)
     } catch (err: any) {
       toast.error('Export fail: ' + (err.message || 'Error'))

@@ -1,4 +1,3 @@
-
 import { useEffect, useState, useRef } from 'react'
 import { X, Loader2 } from 'lucide-react'
 import type { Lead, LeadInsert, LeadStatus, LeadSource } from '@/types'
@@ -11,7 +10,8 @@ interface Props {
   isSaving: boolean
 }
 
-const STATUSES: LeadStatus[] = ['New', 'Contacted', 'Interested', 'Closed', 'Lost']
+// 🆕 Negotiation + Visitor added
+const STATUSES: LeadStatus[] = ['New', 'Contacted', 'Interested', 'Negotiation', 'Visitor', 'Closed', 'Lost']
 const SOURCES: LeadSource[]  = ['facebook', 'whatsapp', 'Meta Ads', 'Manual', 'Imported']
 
 interface Form {
@@ -38,10 +38,21 @@ function validate(f: Form) {
   return e
 }
 
+// 🆕 Status color/style map — Negotiation + Visitor included
+const STATUS_STYLES: Record<LeadStatus, { bg: string; color: string }> = {
+  New:         { bg: '#fff',    color: '#374151' },
+  Contacted:   { bg: '#fffbeb', color: '#d97706' },
+  Interested:  { bg: '#f5f3ff', color: '#7c3aed' },
+  Negotiation: { bg: '#fdf4ff', color: '#9333ea' },
+  Visitor:     { bg: '#ecfeff', color: '#0891b2' },
+  Closed:      { bg: '#f0fdf4', color: '#15803d' },
+  Lost:        { bg: '#fef2f2', color: '#dc2626' },
+}
+
 export default function LeadModal({ lead, open, onClose, onSave, isSaving }: Props) {
-  const [form, setForm] = useState<Form>(EMPTY)
+  const [form, setForm]     = useState<Form>(EMPTY)
   const [errors, setErrors] = useState<Partial<Record<keyof Form, string>>>({})
-  const firstRef = useRef<HTMLInputElement>(null)
+  const firstRef            = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (!open) return
@@ -91,6 +102,8 @@ export default function LeadModal({ lead, open, onClose, onSave, isSaving }: Pro
   }
 
   if (!open) return null
+
+  const statusStyle = STATUS_STYLES[form.status] ?? { bg: '#fff', color: '#374151' }
 
   return (
     <div
@@ -189,20 +202,19 @@ export default function LeadModal({ lead, open, onClose, onSave, isSaving }: Pro
                 onChange={set('status')}
                 style={{
                   height: 38,
-                  background:
-                    form.status === 'Interested' ? '#f5f3ff' :
-                    form.status === 'Contacted'  ? '#fffbeb' :
-                    form.status === 'Closed'     ? '#f0fdf4' :
-                    form.status === 'Lost'       ? '#fef2f2' : '#fff',
-                  color:
-                    form.status === 'Interested' ? '#7c3aed' :
-                    form.status === 'Contacted'  ? '#d97706' :
-                    form.status === 'Closed'     ? '#15803d' :
-                    form.status === 'Lost'       ? '#dc2626' : '#374151',
+                  background: statusStyle.bg,
+                  color:      statusStyle.color,
                   fontWeight: 600,
                 }}
               >
-                {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+                {STATUSES.map(s => (
+                  <option key={s} value={s} style={{
+                    background: STATUS_STYLES[s]?.bg    ?? '#fff',
+                    color:      STATUS_STYLES[s]?.color ?? '#374151',
+                  }}>
+                    {s}
+                  </option>
+                ))}
               </select>
             </div>
           </div>

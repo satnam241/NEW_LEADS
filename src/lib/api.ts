@@ -47,32 +47,38 @@ async function handleResponse<T>(res: Response): Promise<T> {
 
 function mapStatus(s: string): Lead['status'] {
   const map: Record<string, Lead['status']> = {
-    new:        'New',
-    contacted:  'Contacted',
-    interested: 'Interested',
-    converted:  'Closed',
-    closed:     'Closed',
-    lost:       'Lost',
-    New:        'New',
-    Contacted:  'Contacted',
-    Interested: 'Interested',
-    Closed:     'Closed',
-    Lost:       'Lost',
+    new:         'New',
+    contacted:   'Contacted',
+    interested:  'Interested',
+    negotiation: 'Negotiation', // 🆕
+    visitor:     'Visitor',     // 🆕
+    converted:   'Closed',
+    closed:      'Closed',
+    lost:        'Lost',
+    // PascalCase (already correct)
+    New:         'New',
+    Contacted:   'Contacted',
+    Interested:  'Interested',
+    Negotiation: 'Negotiation', // 🆕
+    Visitor:     'Visitor',     // 🆕
+    Closed:      'Closed',
+    Lost:        'Lost',
   }
   return map[s] ?? 'New'
 }
 
-function unmapStatus(s: Lead['status']): string {
+function unmapStatus(s: string): string {
   const map: Record<string, string> = {
-    New:        'new',
-    Contacted:  'contacted',
-    Interested: 'contacted',
-    Closed:     'closed',
-    Lost:       'lost',  
+    New:         'new',
+    Contacted:   'contacted',
+    Interested:  'interested',
+    Negotiation: 'negotiation', // 🆕
+    Visitor:     'visitor',     // 🆕
+    Closed:      'closed',
+    Lost:        'lost',
   }
   return map[s] ?? 'new'
 }
-
 export function mapLead(raw: any): Lead {
   const followUpRaw = raw.followUp
 
@@ -309,17 +315,24 @@ export async function fetchStats(): Promise<LeadStats> {
 
     const raw = await res.json()
 
-    const totalLeads     = raw.totalLeads     ?? 0
-    const newLeadsCount  = raw.newLeadsCount  ?? 0
-    const contactedCount = raw.contactedCount ?? 0
-    const convertedCount = raw.convertedCount ?? 0
-    const lostCount      = raw.lostCount      ?? 0
-    const byStatus: Record<string, number> = {
-      New:       newLeadsCount,
-      Contacted: contactedCount,
-      Closed:    convertedCount,
-      Lost:      lostCount,
+    const totalLeads = raw.totalLeads ?? 0
+
+    // ✅ Pehle old fields se fallback byStatus banao
+    let byStatus: Record<string, number> = {
+      New:       raw.newLeadsCount  ?? 0,
+      Contacted: raw.contactedCount ?? 0,
+      Closed:    raw.convertedCount ?? 0,
+      Lost:      raw.lostCount      ?? 0,
     }
+
+    // ✅ /admin/stats/summary se Negotiation + Visitor bhi lo
+    try {
+      const summaryRes = await fetch(`${API_BASE}/admin/stats/summary`, { headers })
+      if (summaryRes.ok) {
+        const summary = await summaryRes.json()
+        if (summary.byStatus) byStatus = summary.byStatus
+      }
+    } catch { /* fallback to old byStatus above */ }
 
     const bySource: Record<string, number> = {}
     try {
@@ -332,13 +345,10 @@ export async function fetchStats(): Promise<LeadStats> {
           bySource[src] = (bySource[src] ?? 0) + 1
         }
       }
-    } catch {
-      
-    }
+    } catch { }
 
     let todayFollowups   = 0
     let overdueFollowups = 0
-
     try {
       const [dueRes, overdueRes] = await Promise.all([
         fetch(`${API_BASE}/followup/due`,     { headers }),
@@ -349,10 +359,10 @@ export async function fetchStats(): Promise<LeadStats> {
     } catch { }
 
     return {
-      total: totalLeads,
+      total:            totalLeads,
       byStatus,
-      bySource,  // ✅ ab source counts aayenge
-      thisMonth: totalLeads,
+      bySource,
+      thisMonth:        totalLeads,
       todayFollowups,
       overdueFollowups,
     }
@@ -361,7 +371,6 @@ export async function fetchStats(): Promise<LeadStats> {
     return { total: 0, byStatus: {}, bySource: {}, thisMonth: 0, todayFollowups: 0, overdueFollowups: 0 }
   }
 }
-
 export async function fetchFollowups(
   filter: 'today' | 'overdue' | 'upcoming' | 'all'
 ): Promise<Lead[]> {
@@ -391,6 +400,71 @@ export async function markFollowupDone(id: string): Promise<void> {
   if (!res.ok) throw new Error('Failed to cancel follow-up')
 }
 
+export async function acknowledgeFollowUp(id: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/followup/leads/${id}/acknowledge`, {
+    method:  'PATCH',
+    headers: authHeaders(),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.message ?? `Acknowledge failed (${res.status})`)
+  }
+}
+ 
+/** PATCH /followup/leads/:id/resolve — done, log bhi banega */
+export async function resolveFollowUp(
+  id: string,
+  payload: { note?: string; type?: 'whatsapp' | 'email' | 'both' }
+): Promise<void> {
+  const res = await fetch(`${API_BASE}/followup/leads/${id}/resolve`, {
+    method:  'PATCH',
+    headers: authHeaders(),
+    body:    JSON.stringify({ note: payload.note, type: payload.type ?? 'whatsapp' }),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.message ?? `Resolve failed (${res.status})`)
+  }
+}
+ 
+/** PATCH /followup/leads/:id/reschedule — kal ke liye */
+export async function rescheduleFollowUp(
+  id: string,
+  newDate?: string          // ISO string, optional — default kal 10 baje
+): Promise<void> {
+  const res = await fetch(`${API_BASE}/followup/leads/${id}/reschedule`, {
+    method:  'PATCH',
+    headers: authHeaders(),
+    body:    JSON.stringify(newDate ? { newDate } : {}),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.message ?? `Reschedule failed (${res.status})`)
+  }
+}
+export async function fetchOverdueFollowUps(): Promise<OverdueLead[]> {
+  const res = await fetch(`${API_BASE}/followup/overdue`, {
+    headers: authHeaders(),
+  })
+  if (!res.ok) throw new Error('Failed to fetch overdue follow-ups')
+  const data = await res.json()
+  return data.data ?? []
+}
+ 
+/** GET /followup/stats — overdue/upcoming/resolved counts */
+export async function fetchFollowUpStats(): Promise<{
+  overdue: number
+  upcoming: number
+  resolved: number
+}> {
+  const res = await fetch(`${API_BASE}/followup/stats`, {
+    headers: authHeaders(),
+  })
+  if (!res.ok) return { overdue: 0, upcoming: 0, resolved: 0 }
+  const data = await res.json()
+  return data.data ?? { overdue: 0, upcoming: 0, resolved: 0 }
+}
+ 
 
 export async function fetchActivities(
   userId: string,
@@ -712,3 +786,4 @@ export async function scheduleFollowUp(
     throw new Error(err.message ?? `Follow-up scheduling failed (${res.status})`)
   }
 }
+
