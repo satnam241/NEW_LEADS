@@ -16,8 +16,8 @@ const COLUMNS: { status: LeadStatus; label: string; color: string; bg: string; d
 ]
 
 function LeadCard({ lead, onEdit }: { lead: Lead; onEdit: (l: Lead) => void }) {
-  return (
-    <div className="bg-white border border-slate-200 rounded-xl p-3 shadow-sm hover:shadow-md transition-shadow cursor-pointer group" onClick={() => onEdit(lead)}>
+  return ( 
+  <div className="bg-white border border-slate-200 rounded-xl p-3 shadow-sm hover:shadow-md transition-shadow cursor-pointer group overflow-hidden" onClick={() => onEdit(lead)}>
       <div className="flex items-start gap-2 mb-2">
         <Avatar name={lead.name} size={7} />
         <div className="flex-1 min-w-0">
