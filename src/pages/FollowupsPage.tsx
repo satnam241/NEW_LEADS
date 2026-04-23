@@ -156,7 +156,7 @@ function ScheduleModal({
               type="text"
               value={note}
               onChange={e => setNote(e.target.value)}
-              placeholder="Kya discuss karna hai…"
+              placeholder=""
               style={{
                 width: '100%', height: 38, borderRadius: 8, border: '1px solid #e2e8f0',
                 padding: '0 12px', fontSize: 13, outline: 'none', boxSizing: 'border-box',
