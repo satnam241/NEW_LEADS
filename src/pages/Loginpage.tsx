@@ -65,7 +65,7 @@ export default function LoginPage() {
           <h1 style={{ fontSize: 22, fontWeight: 700, color: '#0f172a', marginBottom: 4 }}>
             LeadFlow CRM
           </h1>
-          <p style={{ fontSize: 13, color: '#94a3b8' }}>Admin panel mein login karein</p>
+          <p style={{ fontSize: 13, color: '#94a3b8' }}></p>
         </div>
 
         {/* Error */}
