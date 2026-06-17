@@ -47,10 +47,12 @@ export default function ExportDropdown() {
       </button>
 
       {open && (
-        <div className="dropdown" style={{ minWidth: 220, right: 0, left: 'auto' }}>
+        <div className="dropdown" style={{ minWidth: 220, right: 0, left: 'auto',background:'#3C3C3C',
+border:'1px solid rgba(255,255,255,.08)',
+borderRadius:14 }}>
 
           {/* Format picker */}
-          <div style={{ padding: '8px 10px 6px', borderBottom: '1px solid #f1f5f9' }}>
+          <div style={{ padding: '8px 10px 6px', borderBottom: '1px solid rgba(255,255,255,.06)' }}>
             <p style={{ fontSize: 11, fontWeight: 600, color: '#94a3b8', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
               Format
             </p>
@@ -62,8 +64,8 @@ export default function ExportDropdown() {
                   style={{
                     flex: 1, padding: '6px 0', fontSize: 12, borderRadius: 7,
                     border: `1.5px solid ${fmt === f ? '#4c6ef5' : '#e2e8f0'}`,
-                    background: fmt === f ? '#eff4ff' : '#fff',
-                    color: fmt === f ? '#4c6ef5' : '#64748b',
+                    background: fmt === f ? 'rgba(76,111,245,.18)' : '#2a2d3e',
+                    color: fmt === f ? '#77a8ff' : '#cbd5e1',
                     fontWeight: fmt === f ? 600 : 400,
                     cursor: 'pointer',
                     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,

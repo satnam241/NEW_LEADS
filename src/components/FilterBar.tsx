@@ -40,7 +40,7 @@ export default function FilterBar({
   return (
     <div style={{
       display: 'flex', flexDirection: 'column', gap: 8,
-      padding: '12px 16px', borderBottom: '1px solid #f1f5f9',
+      padding: '12px 16px', borderBottom: '1px solid rgba(255,255,255,.06)',background:'#3C3C3C',
     }}>
       <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
 
@@ -52,7 +52,7 @@ export default function FilterBar({
           }} />
           <input
             className="input-base"
-            style={{ paddingLeft: 32, height: 36, fontSize: 13 }}
+            style={{ paddingLeft: 32, height: 36, fontSize: 13 ,background:'#2A2A2A',color:'#ffffff',border:'1px solid rgba(255,255,255,.08)'}}
             placeholder="Search name, phone, email…"
             value={filters.search}
             onChange={set('search')}
@@ -72,7 +72,11 @@ export default function FilterBar({
 
         {/* Status */}
         <select className="input-base"
-          style={{ height: 36, width: 'auto', minWidth: 140, fontSize: 13 }}
+          style={{ height: 36, width: 'auto', minWidth: 140, fontSize: 13,
+            background:'#2A2A2A',
+            color:'#ffffff',
+            border:'1px solid rgba(255,255,255,.08)'
+           }}
           value={filters.status} onChange={set('status')}>
           <option value="">All Statuses</option>
           {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
@@ -80,7 +84,11 @@ export default function FilterBar({
 
         {/* Source */}
         <select className="input-base"
-          style={{ height: 36, width: 'auto', minWidth: 130, fontSize: 13 }}
+          style={{ height: 36, width: 'auto', minWidth: 130, fontSize: 13 ,
+            background:'#2A2A2A',
+            color:'#ffffff',
+            border:'1px solid rgba(255,255,255,.08)'
+          }}
           value={filters.source} onChange={set('source')}>
           <option value="">All Sources</option>
           {SOURCES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
@@ -90,17 +98,29 @@ export default function FilterBar({
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <Calendar size={13} style={{ color: '#94a3b8', flexShrink: 0 }} />
           <input type="date" className="input-base"
-            style={{ height: 36, fontSize: 12 }}
+            style={{ height: 36, fontSize: 12 ,
+              background:'#2A2A2A',
+            color:'#ffffff',
+            border:'1px solid rgba(255,255,255,.08)'
+            }}
             value={filters.dateFrom} onChange={set('dateFrom')} />
           <span style={{ color: '#cbd5e1', fontSize: 14 }}>→</span>
           <input type="date" className="input-base"
-            style={{ height: 36, fontSize: 12 }}
+            style={{ height: 36, fontSize: 12,
+              background:'#2A2A2A',
+            color:'#ffffff',
+            border:'1px solid rgba(255,255,255,.08)'
+             }}
             value={filters.dateTo} onChange={set('dateTo')} />
         </div>
 
         {hasActive && (
           <button className="btn-secondary"
-            style={{ height: 36, fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }}
+            style={{ height: 36, fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 ,
+              background:'#2A2A2A',
+            color:'#ffffff',
+            border:'1px solid rgba(255,255,255,.08)'
+            }}
             onClick={clearAll}>
             <X size={12} /> Clear
           </button>
@@ -137,14 +157,15 @@ function Chip({ label, onRemove }: { label: string; onRemove: () => void }) {
     <span style={{
       display: 'inline-flex', alignItems: 'center', gap: 4,
       padding: '2px 8px', borderRadius: 99,
-      background: '#eff6ff', color: '#3b82f6',
+      background: 'rgba(76,110,245,.14)', color: '#9db8ff',
+      border:'1px solid rgba(76,110,245,.24)',
       fontSize: 11, fontWeight: 500,
     }}>
       {label}
       <button onClick={onRemove}
         style={{
           background: 'none', border: 'none', cursor: 'pointer',
-          color: '#93c5fd', display: 'flex', padding: 0,
+          color: '#9db8ff', display: 'flex', padding: 0,
         }}>
         <X size={10} />
       </button>

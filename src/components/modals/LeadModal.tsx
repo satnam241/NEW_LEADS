@@ -40,13 +40,13 @@ function validate(f: Form) {
 
 // 🆕 Status color/style map — Negotiation + Visitor included
 const STATUS_STYLES: Record<LeadStatus, { bg: string; color: string }> = {
-  New:         { bg: '#fff',    color: '#374151' },
-  Contacted:   { bg: '#fffbeb', color: '#d97706' },
-  Interested:  { bg: '#f5f3ff', color: '#7c3aed' },
-  Negotiation: { bg: '#fdf4ff', color: '#9333ea' },
-  Visitor:     { bg: '#ecfeff', color: '#0891b2' },
-  Closed:      { bg: '#f0fdf4', color: '#15803d' },
-  Lost:        { bg: '#fef2f2', color: '#dc2626' },
+  New:         { bg: '#3C3C3C',    color: '#ffffff' },
+  Contacted:   { bg: '#3C3C3C', color: '#f59e0b' },
+  Interested:  { bg: '#3C3C3C', color: '#a855f7' },
+  Negotiation: { bg: '#3C3C3C', color: '#9333ea' },
+  Visitor:     { bg: '#3C3C3C', color: '#06b6d4' },
+  Closed:      { bg: '#3C3C3C', color: '#22c55e' },
+  Lost:        { bg: '#3C3C3C', color: '#ef4444' },
 }
 
 export default function LeadModal({ lead, open, onClose, onSave, isSaving }: Props) {
@@ -111,7 +111,8 @@ export default function LeadModal({ lead, open, onClose, onSave, isSaving }: Pro
       onClick={e => { if (e.target === e.currentTarget) onClose() }}
     >
       <div style={{
-        background: '#fff',
+        background: '#3C3C3C',
+        border:'1px solid rgba(255,255,255,.08)',
         borderRadius: 20,
         width: '100%',
         maxWidth: 540,
@@ -125,10 +126,10 @@ export default function LeadModal({ lead, open, onClose, onSave, isSaving }: Pro
         {/* Header */}
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '18px 20px', borderBottom: '1px solid #f1f5f9', flexShrink: 0,
+          padding: '18px 20px', borderBottom: '1px solid rgba(255,255,255,.06)', flexShrink: 0,
         }}>
           <div>
-            <h2 style={{ fontSize: 15, fontWeight: 700, color: '#0f172a' }}>
+            <h2 style={{ fontSize: 15, fontWeight: 700, color: '#ffffff' }}>
               {lead ? '✏️ Edit Lead' : '➕ Add New Lead'}
             </h2>
             {lead && (
@@ -157,13 +158,18 @@ export default function LeadModal({ lead, open, onClose, onSave, isSaving }: Pro
                 className={`input-base ${errors.name ? 'border-red-400' : ''}`}
                 value={form.name}
                 onChange={set('name')}
-                style={{ height: 38 }}
+                style={{ height: 38 ,
+                         background:'#2a2d3e',
+                         color:'#fff',
+                         border:'1px solid rgba(255,255,255,.12)'}}
               />
               {errors.name && <p style={errStyle}>{errors.name}</p>}
             </div>
             <div>
               <label style={labelStyle}>Phone</label>
-              <input className="input-base" value={form.phone} onChange={handlePhoneChange} style={{ height: 38 }} />
+              <input className="input-base" value={form.phone} onChange={handlePhoneChange} style={{ height: 38,background:'#2a2d3e',
+color:'#fff',
+border:'1px solid rgba(255,255,255,.12)' }} />
             </div>
           </div>
 
@@ -176,13 +182,17 @@ export default function LeadModal({ lead, open, onClose, onSave, isSaving }: Pro
                 type="email"
                 value={form.email}
                 onChange={set('email')}
-                style={{ height: 38 }}
+                style={{ height: 38,background:'#2a2d3e',
+color:'#fff',
+border:'1px solid rgba(255,255,255,.12)' }}
               />
               {errors.email && <p style={errStyle}>{errors.email}</p>}
             </div>
             <div>
               <label style={labelStyle}>WhatsApp</label>
-              <input className="input-base" value={form.whatsapp} onChange={set('whatsapp')} style={{ height: 38 }} />
+              <input className="input-base" value={form.whatsapp} onChange={set('whatsapp')} style={{ height: 38,background:'#2a2d3e',
+color:'#fff',
+border:'1px solid rgba(255,255,255,.12)' }} />
             </div>
           </div>
 
@@ -190,7 +200,9 @@ export default function LeadModal({ lead, open, onClose, onSave, isSaving }: Pro
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
               <label style={labelStyle}>Source</label>
-              <select className="input-base" value={form.source} onChange={set('source')} style={{ height: 38 }}>
+              <select className="input-base" value={form.source} onChange={set('source')} style={{ height: 38,background:'#2a2d3e',
+color:'#fff',
+border:'1px solid rgba(255,255,255,.12)' }}>
                 {SOURCES.map(s => <option key={s} value={s}>{s}</option>)}
               </select>
             </div>
@@ -202,9 +214,11 @@ export default function LeadModal({ lead, open, onClose, onSave, isSaving }: Pro
                 onChange={set('status')}
                 style={{
                   height: 38,
-                  background: statusStyle.bg,
-                  color:      statusStyle.color,
-                  fontWeight: 600,
+                  // background: statusStyle.bg,
+                  // color:      statusStyle.color,
+                  fontWeight: 600,background:'#2a2d3e',
+color:'#fff',
+border:'1px solid rgba(255,255,255,.12)'
                 }}
               >
                 {STATUSES.map(s => (
@@ -227,7 +241,9 @@ export default function LeadModal({ lead, open, onClose, onSave, isSaving }: Pro
               placeholder="Write note..."
               value={form.note}
               onChange={set('note')}
-              style={{ height: 38 }}
+              style={{ height: 38,background:'#2a2d3e',
+color:'#fff',
+border:'1px solid rgba(255,255,255,.12)' }}
             />
           </div>
 
@@ -236,14 +252,14 @@ export default function LeadModal({ lead, open, onClose, onSave, isSaving }: Pro
         {/* Footer */}
         <div style={{
           display: 'flex', justifyContent: 'flex-end', gap: 8,
-          padding: '14px 20px', borderTop: '1px solid #f1f5f9', flexShrink: 0,
+          padding: '14px 20px', borderTop: '1px solid rgba(255,255,255,.06)', flexShrink: 0,
         }}>
-          <button className="btn-secondary" onClick={onClose} style={{ height: 38 }}>Cancel</button>
+          <button className="btn-secondary" onClick={onClose} style={{ height: 38,background:'#2a2d3e',color:'#fff' }}>Cancel</button>
           <button
             className="btn-primary"
             onClick={handleSubmit}
             disabled={isSaving}
-            style={{ height: 38, minWidth: 90, justifyContent: 'center' }}
+            style={{ height: 38, minWidth: 90, justifyContent: 'center',background:'#4c6ef5' }}
           >
             {isSaving
               ? <><Loader2 size={14} className="animate-spin" /> Saving…</>

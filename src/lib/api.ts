@@ -786,4 +786,3 @@ export async function scheduleFollowUp(
     throw new Error(err.message ?? `Follow-up scheduling failed (${res.status})`)
   }
 }
-

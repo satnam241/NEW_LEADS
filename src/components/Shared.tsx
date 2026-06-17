@@ -9,11 +9,11 @@ export function StatusBadge({ status }: { status: LeadStatus }) {
 
 // ─── SourceBadge — backend sources included ───────────────────────────────────
 const SOURCE_STYLES: Record<string, { bg: string; color: string; label: string }> = {
-  'facebook':  { bg: '#eff4ff', color: '#4c6ef5', label: '📘 Facebook' },
-  'whatsapp':  { bg: '#f0fdf4', color: '#15803d', label: '💬 WhatsApp' },
-  'Meta Ads':  { bg: '#eff4ff', color: '#3b5bdb', label: 'Meta Ads'   },
-  'Manual':    { bg: '#f8fafc', color: '#475569', label: 'Manual'      },
-  'Imported':  { bg: '#f0fdfa', color: '#0f766e', label: 'Imported'    },
+  'facebook':  { bg: 'rgba(76,110,245,.14)', color: '#7ea6ff', label: '📘 Facebook' },
+  'whatsapp':  { bg: 'rgba(76,110,245,.14)', color: '#4ade80', label: '💬 WhatsApp' },
+  'Meta Ads':  { bg: 'rgba(76,110,245,.14)', color: '#8b9cff', label: 'Meta Ads'   },
+  'Manual':    { bg: 'rgba(76,110,245,.14)', color: '#cbd5e1', label: 'Manual'      },
+  'Imported':  { bg: 'rgba(76,110,245,.14)', color: '#67e8f9', label: 'Imported'    },
 }
 
 export function SourceBadge({ source }: { source: string }) {

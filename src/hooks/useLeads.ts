@@ -13,6 +13,8 @@ import type {
   FollowUpPayload,
   SendMessagePayload,
 } from '@/types'
+import { fetchDashboardStats } from '@/lib/dashboardApi'
+
 
 const LEADS      = 'leads'
 const STATS      = 'stats'
@@ -176,6 +178,26 @@ export function useStats() {
   })
 }
 
+// export function useStats(month?: number, year?: number) {
+//   const now = new Date()
+//   const m   = month ?? now.getMonth() + 1
+//   const y   = year  ?? now.getFullYear()
+ 
+//   return useQuery({
+//     queryKey:  [STATS, m, y],
+//     queryFn:   () => fetchDashboardStats(m, y),
+//     staleTime: 0,
+//   })
+// }
+
+export function useMonthlyReport(month: number, year: number) {
+  return useQuery({
+    queryKey:  ['monthlyReport', month, year],
+    queryFn:   () => fetchDashboardStats(month, year),
+    staleTime: 60_000,
+    enabled:   !!month && !!year,
+  })
+}
 
 export function useFollowups(filter: 'today' | 'overdue' | 'upcoming' | 'all') {
   return useQuery({

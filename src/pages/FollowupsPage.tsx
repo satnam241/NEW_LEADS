@@ -1,201 +1,166 @@
-
 import { useState, useMemo } from 'react'
 import { format, isToday, isPast, parseISO, isValid } from 'date-fns'
-import { CheckCircle2, CalendarClock, AlertCircle, Calendar, Edit2, Search, X, CalendarPlus } from 'lucide-react'
-import { useSearchParams } from 'react-router-dom'
-import { useFollowups, useMarkFollowupDone, useUpdateLead, useScheduleFollowUp } from '@/hooks/useLeads'
-import { ContactButtons, Avatar, StatusBadge } from '@/components/Shared'
+import {
+  CheckCircle2, Calendar, Edit2,
+  CalendarPlus, X, Search,
+} from 'lucide-react'
+import { useSearchParams, useNavigate } from 'react-router-dom'
+import {
+  useFollowups, useMarkFollowupDone, useUpdateLead, useScheduleFollowUp,
+} from '@/hooks/useLeads'
 import LeadModal from '@/components/modals/LeadModal'
 import type { Lead, LeadInsert, FollowUpPayload } from '@/types'
 
+// ─────────────────────────────────────────────────────────────────
 type Tab = 'today' | 'overdue' | 'upcoming' | 'all'
 
-const TABS: {
-  key: Tab
+const TAB_CONFIG: Record<Tab, {
   label: string
-  icon: React.ReactNode
+  subLabel: string
+  color: string
+  badgeBg: string
+  activeBorder: string
   activeBg: string
-  activeText: string
-}[] = [
-  { key: 'today',    label: 'Due Today',  icon: <CalendarClock size={14} />, activeBg: '#fffbeb', activeText: '#d97706' },
-  { key: 'overdue',  label: 'Overdue',    icon: <AlertCircle size={14} />,   activeBg: '#fef2f2', activeText: '#dc2626' },
-  { key: 'upcoming', label: 'Upcoming',   icon: <Calendar size={14} />,      activeBg: '#eff4ff', activeText: '#4c6ef5' },
-  { key: 'all',      label: 'All Active', icon: <CalendarClock size={14} />, activeBg: '#f8fafc', activeText: '#475569' },
-]
-
-function safeParseDate(dateStr: string | null | undefined): Date | null {
-  if (!dateStr) return null
-  try {
-    const d = parseISO(dateStr)
-    return isValid(d) ? d : null
-  } catch {
-    return null
-  }
+}> = {
+  today: {
+    label: 'Due Today', subLabel: 'leads due today',
+    color: 'white', badgeBg: '#3c3c3c',
+    activeBorder: '#565656', activeBg: '#3c3c3c',
+  },
+  overdue: {
+    label: 'Overdue', subLabel: 'need attention',
+    color: 'white', badgeBg: '#3c3c3c',
+    activeBorder: '#565656', activeBg: '#3c3c3c',
+  },
+  upcoming: {
+    label: 'Upcoming', subLabel: 'scheduled ahead',
+    color: 'white', badgeBg: '#3c3c3c',
+    activeBorder: '#565656', activeBg: '#3c3c3c',
+  },
+  all: {
+    label: 'All Active', subLabel: 'total follow-ups',
+    color: 'white', badgeBg: '#3c3c3c',
+    activeBorder: '#565656', activeBg: '#3c3c3c',
+  },
 }
 
-// ─── Schedule Follow-up Modal ─────────────────────────────────────────────────
-// Ye modal seedha /followup/leads/:id/follow-up hit karta hai
-function ScheduleModal({
-  lead,
-  open,
-  onClose,
-  onSave,
-  isSaving,
-}: {
-  lead: Lead | null
-  open: boolean
-  onClose: () => void
-  onSave: (payload: FollowUpPayload) => void
-  isSaving: boolean
-}) {
-  const [date, setDate]         = useState('')
-  const [note, setNote]         = useState('')
-  const [recurrence, setRec]    = useState<'once' | 'tomorrow' | '3days' | 'weekly'>('once')
-  const [whatsapp, setWhatsapp] = useState(false)
-  const [error, setError]       = useState('')
+// ─────────────────────────────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────────────────────────────
+function safeParseDate(d?: string | null): Date | null {
+  if (!d) return null
+  try { const p = parseISO(d); return isValid(p) ? p : null } catch { return null }
+}
 
-  // Prefill when lead changes
-  const prevLeadId = useState<string | null>(null)
-  if (open && lead && (lead._id ?? lead.id) !== prevLeadId[0]) {
-    prevLeadId[1](lead._id ?? lead.id)
+function avatarColor(name: string) {
+  const colors = ['#3c3c3c', '#3c3c3c', '#3c3c3c', '#3c3c3c', '#3c3c3c', '#3c3c3c']
+  let h = 0
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) % colors.length
+  return colors[Math.abs(h)]
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Schedule Modal
+// ─────────────────────────────────────────────────────────────────
+function ScheduleModal({
+  lead, open, onClose, onSave, isSaving,
+}: {
+  lead: Lead | null; open: boolean
+  onClose: () => void; onSave: (p: FollowUpPayload) => void; isSaving: boolean
+}) {
+  const [date, setDate] = useState('')
+  const [note, setNote] = useState('')
+  const [rec,  setRec]  = useState<'once'|'tomorrow'|'3days'|'weekly'>('once')
+  const [wa,   setWa]   = useState(false)
+  const [err,  setErr]  = useState('')
+  const prevId = useState<string|null>(null)
+
+  if (open && lead && (lead._id ?? lead.id) !== prevId[0]) {
+    prevId[1](lead._id ?? lead.id)
     setDate(lead.followup_date ?? '')
     setNote(lead.followup_note ?? '')
     setRec((lead.followUp?.recurrence as any) ?? 'once')
-    setWhatsapp(lead.followUp?.whatsappOptIn ?? false)
-    setError('')
+    setWa(lead.followUp?.whatsappOptIn ?? false)
+    setErr('')
   }
 
   if (!open || !lead) return null
 
-  const handleSubmit = () => {
-    if (recurrence === 'once' && !date) {
-      setError('Date select karo')
-      return
-    }
-    onSave({
-      date:          recurrence === 'once' ? date : undefined,
-      message:       note || undefined,
-      recurrence,
-      whatsappOptIn: whatsapp,
-    })
+  const submit = () => {
+    if (rec === 'once' && !date) { setErr('Date select karo'); return }
+    onSave({ date: rec === 'once' ? date : undefined, message: note || undefined, recurrence: rec, whatsappOptIn: wa })
   }
 
   const RECS = [
-    { value: 'once',     label: 'Once' },
-    { value: 'tomorrow', label: 'Tomorrow' },
-    { value: '3days',    label: '3 Days' },
-    { value: 'weekly',   label: 'Weekly' },
+    { v: 'once', l: 'Once' }, { v: 'tomorrow', l: 'Tomorrow' },
+    { v: '3days', l: '3 Days' }, { v: 'weekly', l: 'Weekly' },
   ] as const
 
   return (
     <div
-      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}
+      style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.6)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:9999 }}
       onClick={e => { if (e.target === e.currentTarget) onClose() }}
     >
-      <div style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 420, boxShadow: '0 20px 60px rgba(0,0,0,0.18)', display: 'flex', flexDirection: 'column' }}>
-
-        {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid #f1f5f9' }}>
+      <div style={{ background:'#2a2d3e', borderRadius:16, width:'100%', maxWidth:420, boxShadow:'0 24px 60px rgba(0,0,0,0.4)', display:'flex', flexDirection:'column' }}>
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'16px 20px', borderBottom:'1px solid rgba(255,255,255,0.08)' }}>
           <div>
-            <p style={{ fontSize: 14, fontWeight: 700, color: '#0f172a' }}>📅 Schedule Follow-up</p>
-            <p style={{ fontSize: 12, color: '#94a3b8', marginTop: 2 }}>{lead.name} · {lead.phone ?? lead.email ?? '—'}</p>
+            <p style={{ fontSize:14, fontWeight:700, color:'#fff' }}>📅 Schedule Follow-up</p>
+            <p style={{ fontSize:12, color:'#9ca3b8', marginTop:2 }}>{lead.name} · {lead.phone ?? lead.email ?? '—'}</p>
           </div>
-          <button onClick={onClose} style={{ background: '#f8fafc', border: '1px solid #f1f5f9', borderRadius: 8, padding: 6, cursor: 'pointer', color: '#64748b', display: 'flex' }}>
+          <button onClick={onClose} style={{ background:'rgba(255,255,255,0.08)', border:'none', borderRadius:8, padding:6, cursor:'pointer', color:'#9ca3b8', display:'flex' }}>
             <X size={14} />
           </button>
         </div>
 
-        {/* Body */}
-        <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-
-          {/* Recurrence pills */}
+        <div style={{ padding:20, display:'flex', flexDirection:'column', gap:14 }}>
           <div>
-            <label style={labelStyle}>Recurrence</label>
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            <label style={labelS}>Recurrence</label>
+            <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
               {RECS.map(r => (
-                <button
-                  key={r.value}
-                  type="button"
-                  onClick={() => setRec(r.value)}
-                  style={{
-                    padding: '6px 14px', borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: 'pointer',
-                    border: `1.5px solid ${recurrence === r.value ? '#4c6ef5' : '#e2e8f0'}`,
-                    background: recurrence === r.value ? '#eff4ff' : '#fff',
-                    color: recurrence === r.value ? '#4c6ef5' : '#64748b',
-                  }}
-                >
-                  {r.label}
+                <button key={r.v} onClick={() => setRec(r.v)} style={{
+                  padding:'6px 14px', borderRadius:8, fontSize:12, fontWeight:500, cursor:'pointer',
+                  border:`1.5px solid ${rec === r.v ? '#4c6ef5' : 'rgba(255,255,255,0.12)'}`,
+                  background: rec === r.v ? 'rgba(76,111,245,0.2)' : 'transparent',
+                  color: rec === r.v ? '#77a8ff' : '#9ca3b8',
+                }}>
+                  {r.l}
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Date — only for 'once' */}
-          {recurrence === 'once' && (
+          {rec === 'once' && (
             <div>
-              <label style={labelStyle}>Follow-up Date *</label>
+              <label style={labelS}>Follow-up Date *</label>
               <input
-                type="date"
-                value={date}
-                onChange={e => { setDate(e.target.value); setError('') }}
+                type="date" value={date}
+                onChange={e => { setDate(e.target.value); setErr('') }}
                 min={new Date().toISOString().split('T')[0]}
-                style={{
-                  width: '100%', height: 38, borderRadius: 8,
-                  border: `1px solid ${error ? '#fca5a5' : '#e2e8f0'}`,
-                  padding: '0 12px', fontSize: 13, outline: 'none', boxSizing: 'border-box',
-                }}
+                style={{ width:'100%', height:38, borderRadius:8, border:`1px solid ${err ? '#ef4444' : 'rgba(255,255,255,0.12)'}`, padding:'0 12px', fontSize:13, outline:'none', boxSizing:'border-box', background:'#1e2130', color:'#fff' }}
               />
-              {error && <p style={{ fontSize: 11, color: '#ef4444', marginTop: 4 }}>{error}</p>}
+              {err && <p style={{ fontSize:11, color:'#ef4444', marginTop:4 }}>{err}</p>}
             </div>
           )}
 
-          {/* Note */}
           <div>
-            <label style={labelStyle}>Note</label>
+            <label style={labelS}>Note</label>
             <input
-              type="text"
-              value={note}
-              onChange={e => setNote(e.target.value)}
-              placeholder=""
-              style={{
-                width: '100%', height: 38, borderRadius: 8, border: '1px solid #e2e8f0',
-                padding: '0 12px', fontSize: 13, outline: 'none', boxSizing: 'border-box',
-              }}
+              type="text" value={note} onChange={e => setNote(e.target.value)} placeholder="Add a note..."
+              style={{ width:'100%', height:38, borderRadius:8, border:'1px solid rgba(255,255,255,0.12)', padding:'0 12px', fontSize:13, outline:'none', boxSizing:'border-box', background:'#1e2130', color:'#fff' }}
             />
           </div>
 
-          {/* WhatsApp opt-in */}
-          <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: '#475569', fontWeight: 500 }}>
-            <input
-              type="checkbox"
-              checked={whatsapp}
-              onChange={e => setWhatsapp(e.target.checked)}
-              style={{ width: 15, height: 15, accentColor: '#25d366' }}
-            />
+          <label style={{ display:'flex', alignItems:'center', gap:8, cursor:'pointer', fontSize:13, color:'#9ca3b8', fontWeight:500 }}>
+            <input type="checkbox" checked={wa} onChange={e => setWa(e.target.checked)} style={{ width:15, height:15, accentColor:'#25d366' }} />
             💬 WhatsApp reminder
           </label>
-
         </div>
 
-        {/* Footer */}
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, padding: '14px 20px', borderTop: '1px solid #f1f5f9' }}>
-          <button
-            onClick={onClose}
-            style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#fff', fontSize: 13, cursor: 'pointer', color: '#64748b' }}
-          >
+        <div style={{ display:'flex', justifyContent:'flex-end', gap:8, padding:'14px 20px', borderTop:'1px solid rgba(255,255,255,0.08)' }}>
+          <button onClick={onClose} style={{ padding:'8px 16px', borderRadius:8, border:'1px solid rgba(255,255,255,0.12)', background:'transparent', fontSize:13, cursor:'pointer', color:'#9ca3b8' }}>
             Cancel
           </button>
-          <button
-            onClick={handleSubmit}
-            disabled={isSaving}
-            style={{
-              padding: '8px 18px', borderRadius: 8, border: 'none',
-              background: isSaving ? '#a5b4fc' : '#4c6ef5',
-              color: '#fff', fontSize: 13, fontWeight: 600,
-              cursor: isSaving ? 'not-allowed' : 'pointer',
-              display: 'flex', alignItems: 'center', gap: 6,
-            }}
-          >
+          <button onClick={submit} disabled={isSaving} style={{ padding:'8px 18px', borderRadius:8, border:'none', background: isSaving ? '#6b7280' : '#4c6ef5', color:'#fff', fontSize:13, fontWeight:600, cursor: isSaving ? 'not-allowed' : 'pointer', display:'flex', alignItems:'center', gap:6 }}>
             <CalendarPlus size={13} />
             {isSaving ? 'Saving…' : 'Schedule'}
           </button>
@@ -205,13 +170,11 @@ function ScheduleModal({
   )
 }
 
-// ─── FollowupCard ─────────────────────────────────────────────────────────────
-function FollowupCard({
-  lead,
-  onEdit,
-  onDone,
-  onSchedule,
-  isDoing,
+// ─────────────────────────────────────────────────────────────────
+// Lead Card
+// ─────────────────────────────────────────────────────────────────
+function LeadCard({
+  lead, onEdit, onDone, onSchedule, isDoing,
 }: {
   lead: Lead
   onEdit: (l: Lead) => void
@@ -219,270 +182,302 @@ function FollowupCard({
   onSchedule: (l: Lead) => void
   isDoing: boolean
 }) {
-  const date       = safeParseDate(lead.followup_date)
-  const isOverdue  = date ? isPast(date) && !isToday(date) : false
-  const isDueToday = date ? isToday(date) : false
+  const navigate = useNavigate()
+  const date     = safeParseDate(lead.followup_date)
+  const isOv     = date ? isPast(date) && !isToday(date) : false
+  const isTod    = date ? isToday(date) : false
+  const leadId   = lead._id ?? lead.id
+  const initial  = lead.name.trim()[0]?.toUpperCase() ?? '?'
+  const avColor  = avatarColor(lead.name)
 
-  let borderStyle = '1px solid #e8edf3'
-  let bgStyle     = '#fff'
-  if (isOverdue)  { borderStyle = '1px solid #fecaca'; bgStyle = 'rgba(254,242,242,0.5)' }
-  if (isDueToday) { borderStyle = '1px solid #fde68a'; bgStyle = 'rgba(255,251,235,0.5)' }
-
-  const leadId = lead._id ?? lead.id
+  const dateColor = isOv ? '#fdfbfb' : isTod ? '#fbf9f9' : '#f9f5f5'
 
   return (
-    <div style={{ background: bgStyle, border: borderStyle, borderRadius: 14, padding: '14px 16px', opacity: lead.followup_done ? 0.55 : 1 }}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+    <div style={{
+      background: '#3c3c3c', borderRadius: 13, padding: '15px 13px',
+      display: 'flex', flexDirection: 'column', gap: 8,
+      border: '1px solid #6c6c6c', opacity: lead.followup_done ? 0.6 : 1,
+      boxShadow: '0 4px 1px #3c3c3c'
+    }}>
 
-        {/* Left */}
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, flex: 1, minWidth: 0 }}>
-          <Avatar name={lead.name} size={9} />
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 4 }}>
-              <p style={{ fontSize: 14, fontWeight: 600, color: '#0f172a' }}>{lead.name}</p>
-              <StatusBadge status={lead.status} />
-              {isOverdue && (
-                <span style={{ fontSize: 11, fontWeight: 700, background: '#fef2f2', color: '#dc2626', padding: '2px 8px', borderRadius: 99, border: '1px solid #fecaca' }}>
-                  ⚠️ Overdue
-                </span>
-              )}
-              {lead.followup_done && (
-                <span style={{ fontSize: 11, fontWeight: 700, background: '#f0fdf4', color: '#16a34a', padding: '2px 8px', borderRadius: 99, border: '1px solid #bbf7d0' }}>
-                  ✓ Done
-                </span>
-              )}
-            </div>
-
-            <p style={{ fontSize: 12, color: '#94a3b8', marginBottom: 6 }}>
-              {lead.email ?? lead.phone ?? '—'}
-            </p>
-
-            {lead.followup_note && (
-              <div style={{ fontSize: 12, color: '#475569', background: '#f8fafc', borderRadius: 8, padding: '6px 10px', border: '1px solid #f1f5f9', marginBottom: 4 }}>
-                📌 {lead.followup_note}
-              </div>
-            )}
-
-            {lead.note && (
-              <p style={{ fontSize: 12, color: '#94a3b8' }}>Note: {lead.note}</p>
-            )}
-
-            {lead.followUp?.recurrence && lead.followUp.recurrence !== 'once' && (
-              <span style={{ fontSize: 11, background: '#f5f3ff', color: '#7c3aed', padding: '2px 8px', borderRadius: 99, marginTop: 4, display: 'inline-block' }}>
-                🔄 {lead.followUp.recurrence}
-              </span>
-            )}
-          </div>
+      {/* Avatar + Name + Phone */}
+      <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+        <div style={{
+          width: 36, height: 36, borderRadius: '50%',
+          background: avColor,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontWeight: 700, fontSize: 14, color: '#070707', flexShrink: 0,
+        }}>
+          {initial}
         </div>
-
-        {/* Right */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8, flexShrink: 0 }}>
-          {date && (
-            <p style={{ fontSize: 12, fontWeight: 700, color: isOverdue ? '#dc2626' : isDueToday ? '#d97706' : '#4c6ef5' }}>
-              {isDueToday ? '📅 Today' : format(date, 'MMM d, yyyy')}
-            </p>
-          )}
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-            <div onClick={e => e.stopPropagation()}>
-              <ContactButtons lead={lead} />
-            </div>
-
-            {/* ── Alag Follow-up button — seedha /followup/leads/:id/follow-up ── */}
-            <button
-              onClick={() => onSchedule(lead)}
-              style={{
-                padding: '4px 10px', fontSize: 12, borderRadius: 8, cursor: 'pointer',
-                border: '1px solid #a5b4fc', background: '#eff4ff', color: '#4c6ef5',
-                display: 'flex', alignItems: 'center', gap: 4, fontWeight: 500,
-              }}
-            >
-              <CalendarPlus size={11} /> Follow-up
-            </button>
-
-            <button
-              onClick={() => onEdit(lead)}
-              className="btn-secondary"
-              style={{ padding: '4px 10px', fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }}
-            >
-              <Edit2 size={11} /> Edit
-            </button>
-
-            {!lead.followup_done && (
-              <button
-                onClick={() => onDone(leadId)}
-                disabled={isDoing}
-                className="btn-green"
-                style={{ padding: '4px 10px', fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }}
-              >
-                <CheckCircle2 size={11} /> Mark Done
-              </button>
-            )}
-          </div>
+        <div style={{ minWidth: 0 }}>
+          <p style={{ fontSize:13, fontWeight:700, color:'#ffffff', margin:0, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
+            {lead.name}
+          </p>
+          <p style={{ fontSize:11, color:'#fafafc', margin:'1px 0 0' }}>
+            {lead.phone ?? lead.email ?? '—'}
+          </p>
         </div>
+      </div>
+
+      {/* Details */}
+      <div style={{ borderTop:'1px solid rgba(255,255,255,0.07)', paddingTop:8, display:'flex', flexDirection:'column', gap:3 }}>
+        {date && (
+          <p style={{ fontSize:10.5, color:'#fcfcfd', margin:0 }}>
+            <span style={{ color: dateColor, fontWeight:600 }}>DATE:</span>{' '}
+            {format(date, 'dd-MM-yyyy')}
+            {isOv  && <span style={{ marginLeft:4, fontSize:9.5, background:'rgba(239,68,68,0.15)', color:'#ef4444', padding:'1px 6px', borderRadius:4 }}>Overdue</span>}
+            {isTod && <span style={{ marginLeft:4, fontSize:9.5, background:'rgba(251,191,36,0.15)', color:'#fbbf24', padding:'1px 6px', borderRadius:4 }}>Today</span>}
+          </p>
+        )}
+
+        {lead.source && (
+          <p style={{ fontSize:10.5, color:'#ffffff', fontWeight:600, margin:0, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
+            {lead.source}
+          </p>
+        )}
+
+        {(lead.followup_note || lead.note) && (
+          <>
+            <p style={{ fontSize:10.5, color:'#ffffff', margin:0, fontWeight:600 }}>MESSAGE:</p>
+            <p style={{
+              fontSize:10.5, color:'#ffffff', margin:0,
+              overflow:'hidden', display:'-webkit-box',
+              WebkitLineClamp: 2, WebkitBoxOrient:'vertical',
+            }}>
+              {lead.followup_note ?? lead.note}
+            </p>
+          </>
+        )}
+      </div>
+
+      {/* Action buttons */}
+      <div style={{ display:'flex', gap:5, flexWrap:'wrap', marginTop:'auto' }}>
+        <button
+          onClick={() => navigate('/leads')}
+          style={{ flex:1, padding:'6px 0', background:'#4c6ef5', border:'none', color:'#ffffff', borderRadius:8, fontSize:11, fontWeight:700, cursor:'pointer' }}
+        >
+          VIEW DETAILS
+        </button>
+      </div>
+
+      <div style={{ display:'flex', gap:5 }}>
+        <button
+          onClick={() => onSchedule(lead)}
+          style={{ flex:1, padding:'5px 0', background:'transparent', border:'1px solid rgba(76,111,245,0.4)', color:'#77a8ff', borderRadius:7, fontSize:10.5, fontWeight:600, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:3 }}
+        >
+          <CalendarPlus size={10} /> Reschedule
+        </button>
+        <button
+          onClick={() => onEdit(lead)}
+          style={{ flex:1, padding:'5px 0', background:'transparent', border:'1px solid rgba(255,255,255,0.1)', color:'#ffffff', borderRadius:7, fontSize:10.5, fontWeight:600, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:3 }}
+        >
+          <Edit2 size={10} /> Edit
+        </button>
+        {!lead.followup_done && (
+          <button
+            onClick={() => onDone(leadId)}
+            disabled={isDoing}
+            style={{ flex:1, padding:'5px 0', background:'transparent', border:'1px solid rgba(34,197,94,0.4)', color:'#22c55e', borderRadius:7, fontSize:10.5, fontWeight:600, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:3 }}
+          >
+            <CheckCircle2 size={10} /> Done
+          </button>
+        )}
       </div>
     </div>
   )
 }
 
-// ─── Main Page ────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────
+// Main Page
+// ─────────────────────────────────────────────────────────────────
 export default function FollowupsPage() {
-  const [searchParams]                      = useSearchParams()
-  const [tab, setTab]                       = useState<Tab>((searchParams.get('tab') as Tab) ?? 'today')
-  const [editLead, setEditLead]             = useState<Lead | null>(null)
-  const [scheduleLead, setScheduleLead]     = useState<Lead | null>(null)
-  const [search, setSearch]                 = useState('')
+  const [searchParams]          = useSearchParams()
+  const [tab, setTab]           = useState<Tab>((searchParams.get('tab') as Tab) ?? 'today')
+  const [editLead, setEditLead] = useState<Lead | null>(null)
+  const [sched,   setSched]     = useState<Lead | null>(null)
+  const [search,  setSearch]    = useState('')
 
-  const { data: rawLeads = [], isLoading, isError } = useFollowups(tab)
+  // ✅ KEY FIX: Sabhi 4 tabs ka data page load pe hi fetch karo simultaneously
+  // Tab switch pe reload nahi hoga — data already ready hoga
+  const { data: todayLeads    = [], isLoading: loadingToday    } = useFollowups('today')
+  const { data: overdueLeads  = [], isLoading: loadingOverdue  } = useFollowups('overdue')
+  const { data: upcomingLeads = [], isLoading: loadingUpcoming } = useFollowups('upcoming')
+  const { data: allLeads      = [], isLoading: loadingAll      } = useFollowups('all')
 
   const markDone  = useMarkFollowupDone()
   const updateM   = useUpdateLead()
   const scheduleM = useScheduleFollowUp()
 
+  // ✅ Active tab ke leads select karo
+  const activeLeads: Lead[] = {
+    today:    todayLeads,
+    overdue:  overdueLeads,
+    upcoming: upcomingLeads,
+    all:      allLeads,
+  }[tab]
+
+  const isLoading = {
+    today:    loadingToday,
+    overdue:  loadingOverdue,
+    upcoming: loadingUpcoming,
+    all:      loadingAll,
+  }[tab]
+
+  // ✅ Search filter active tab ke leads pe
   const leads = useMemo(() => {
     const q = search.trim().toLowerCase()
-    if (!q) return rawLeads
-    return rawLeads.filter(l =>
+    if (!q) return activeLeads
+    return activeLeads.filter(l =>
       l.name.toLowerCase().includes(q) ||
       (l.phone ?? '').includes(q) ||
       (l.email ?? '').toLowerCase().includes(q) ||
       (l.followup_note ?? '').toLowerCase().includes(q)
     )
-  }, [rawLeads, search])
+  }, [activeLeads, search])
 
-  const todayCount   = rawLeads.filter(l => { const d = safeParseDate(l.followup_date); return d && isToday(d) }).length
-  const overdueCount = rawLeads.filter(l => { const d = safeParseDate(l.followup_date); return d && isPast(d) && !isToday(d) }).length
+  // ✅ Counts — har tab ka apna real count, page load pe hi ready
+  const TAB_COUNTS: Record<Tab, number> = {
+    today:    todayLeads.length,
+    overdue:  overdueLeads.length,
+    upcoming: upcomingLeads.length,
+    all:      allLeads.length,
+  }
 
-  // Edit — sirf basic fields (name, status, note etc.)
   const handleSave = async (data: LeadInsert) => {
     if (!editLead) return
     await updateM.mutateAsync({ id: editLead._id ?? editLead.id, updates: data })
     setEditLead(null)
   }
 
-  // Schedule — seedha /followup/leads/:id/follow-up endpoint
   const handleSchedule = async (payload: FollowUpPayload) => {
-    if (!scheduleLead) return
-    await scheduleM.mutateAsync({ id: scheduleLead._id ?? scheduleLead.id, payload })
-    setScheduleLead(null)
+    if (!sched) return
+    try {
+      await scheduleM.mutateAsync({ id: sched._id ?? sched.id, payload })
+      setSched(null)
+    } catch (err) {
+      console.error(err)
+    }
   }
 
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+  const now     = new Date()
+  const dateStr = `${now.getDate()}/${now.getMonth() + 1}/${String(now.getFullYear()).slice(2)}`
 
-      <div>
-        <h1 className="page-title">Follow-ups</h1>
-        <p className="page-sub">Track and manage your lead follow-up schedule</p>
+  return (
+    <div style={{ display:'flex', flexDirection:'column', gap:20 }}>
+
+      {/* Header */}
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+        <h1 style={{ fontSize:26, fontWeight:700, color:'#fff', margin:0 }}>Follow ups</h1>
+        <span style={{ fontSize:13, color:'#9ca3b8' }}>
+          Date: <strong style={{ color:'#fff' }}>{dateStr}</strong>
+        </span>
       </div>
 
-      {!search && (todayCount > 0 || overdueCount > 0) && (
-        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-          {todayCount > 0 && (
-            <div onClick={() => setTab('today')} style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 12, padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
-              <CalendarClock size={15} style={{ color: '#d97706' }} />
-              <span style={{ fontSize: 13, fontWeight: 600, color: '#92400e' }}>{todayCount} due today</span>
+      {/* ── Tab Cards ── */}
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:14 }}>
+        {(Object.keys(TAB_CONFIG) as Tab[]).map(key => {
+          const cfg    = TAB_CONFIG[key]
+          const active = tab === key
+          const count  = TAB_COUNTS[key]
+          return (
+            <div
+              key={key}
+              onClick={() => setTab(key)}
+              style={{
+                background: active ? cfg.activeBg : '#3C3C3C',
+                borderRadius: 13,
+                padding: '18px 20px',
+                cursor: 'pointer',
+                border: active ? `2px solid ${cfg.activeBorder}` : '1px solid rgba(195,194,194,0.07)',
+                transition: 'all 0.18s',
+                boxShadow: active ? `0 4px 20px ${cfg.color}40` : '0 4px 16px rgba(68,67,67,0.1)',
+              }}
+            >
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:10 }}>
+                <span style={{ fontSize:11, color: cfg.color, fontWeight:700, textTransform:'uppercase', letterSpacing:'.05em' }}>
+                  {cfg.label}
+                </span>
+                <span style={{ background: cfg.badgeBg, color: cfg.color, fontSize:12, fontWeight:700, padding:'2px 9px', borderRadius:50 }}>
+                  {count}
+                </span>
+              </div>
+              <p style={{ fontSize:28, fontWeight:700, color:'#fff', margin:0 }}>{count}</p>
+              <p style={{ fontSize:11, color:'#9ca3b8', margin:'4px 0 0' }}>{cfg.subLabel}</p>
             </div>
-          )}
-          {overdueCount > 0 && (
-            <div onClick={() => setTab('overdue')} style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 12, padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
-              <AlertCircle size={15} style={{ color: '#ef4444' }} />
-              <span style={{ fontSize: 13, fontWeight: 600, color: '#dc2626' }}>{overdueCount} overdue — act now!</span>
-            </div>
-          )}
-        </div>
-      )}
+          )
+        })}
+      </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', gap: 4, background: '#f1f5f9', padding: 4, borderRadius: 12 }}>
-          {TABS.map(t => {
-            const active = tab === t.key
-            return (
-              <button
-                key={t.key}
-                onClick={() => setTab(t.key)}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 6,
-                  padding: '7px 14px', borderRadius: 9, fontSize: 13, fontWeight: 500,
-                  border: 'none', cursor: 'pointer', transition: 'all 120ms ease',
-                  background: active ? t.activeBg : 'transparent',
-                  color: active ? t.activeText : '#64748b',
-                  boxShadow: active ? '0 1px 4px rgba(0,0,0,0.08)' : 'none',
-                }}
-              >
-                {t.icon}{t.label}
-              </button>
-            )
-          })}
-        </div>
-
-        <div style={{ position: 'relative', flex: 1, minWidth: 200, maxWidth: 300 }}>
-          <Search size={13} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', pointerEvents: 'none' }} />
+      {/* Section title + Search */}
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+        <h2 style={{ fontSize:22, fontWeight:700, color:'#fff', margin:0 }}>
+          {TAB_CONFIG[tab].label}
+        </h2>
+        <div style={{ position:'relative', maxWidth:260 }}>
+          <Search size={13} style={{ position:'absolute', left:10, top:'50%', transform:'translateY(-50%)', color:'#6b7280' }} />
           <input
-            className="input-base"
-            style={{ paddingLeft: 32, height: 36, fontSize: 13 }}
-            placeholder="Search name, phone, note…"
             value={search}
             onChange={e => setSearch(e.target.value)}
+            placeholder="Search name, phone, note…"
+            style={{
+              height:36, paddingLeft:32, paddingRight: search ? 32 : 14,
+              paddingTop:0, paddingBottom:0,
+              background:'#3C3C3C', border:'1px solid rgba(255,255,255,0.1)',
+              borderRadius:50, color:'#9ca3b8', fontSize:13,
+              outline:'none', fontFamily:'inherit', width:240,
+            }}
           />
           {search && (
-            <button onClick={() => setSearch('')} style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' }}>
+            <button
+              onClick={() => setSearch('')}
+              style={{ position:'absolute', right:8, top:'50%', transform:'translateY(-50%)', background:'none', border:'none', cursor:'pointer', color:'#6b7280', display:'flex' }}
+            >
               <X size={13} />
             </button>
           )}
         </div>
-
-        <span style={{ fontSize: 12, color: '#94a3b8', background: '#f8fafc', padding: '3px 10px', borderRadius: 99, border: '1px solid #f1f5f9', whiteSpace: 'nowrap' }}>
-          {leads.length} result{leads.length !== 1 ? 's' : ''}
-        </span>
       </div>
 
-      {isError && (
-        <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 10, padding: '12px 16px', display: 'flex', gap: 8, alignItems: 'center' }}>
-          <AlertCircle size={14} style={{ color: '#ef4444' }} />
-          <p style={{ fontSize: 13, color: '#dc2626' }}>Server error</p>
-        </div>
-      )}
-
+      {/* Lead Cards Grid */}
       {isLoading ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className="card" style={{ padding: 16, display: 'flex', gap: 12 }}>
-              <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#f1f5f9' }} />
-              <div style={{ flex: 1 }}>
-                <div className="skeleton" style={{ height: 14, width: 140, marginBottom: 8 }} />
-                <div className="skeleton" style={{ height: 11, width: 200 }} />
-              </div>
-            </div>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(175px,1fr))', gap:12 }}>
+          {[...Array(5)].map((_,i) => (
+            <div key={i} style={{ background:'#3c3c3c', borderRadius:13, height:200, opacity:0.5 }} />
           ))}
         </div>
       ) : leads.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '60px 20px', background: '#fff', borderRadius: 16, border: '1px solid #f1f5f9' }}>
-          <div style={{ fontSize: 40, marginBottom: 12 }}>
+        <div style={{ textAlign:'center', padding:'60px 20px', background:'#3c3c3c', borderRadius:14 }}>
+          <p style={{ fontSize:36, margin:'0 0 12px' }}>
             {tab === 'overdue' ? '✅' : tab === 'today' ? '🎉' : '📅'}
-          </div>
-          <p style={{ fontSize: 14, fontWeight: 600, color: '#475569', marginBottom: 4 }}>
-            {search ? 'No results found' : tab === 'overdue' ? 'No overdue follow-ups!' : tab === 'today' ? 'All Clear for Today!' : 'No follow-ups here'}
           </p>
-          <p style={{ fontSize: 12, color: '#94a3b8' }}>
-            {search ? `"${search}" Nofollow-up matched ` : 'No follow-up in this category.'}
+          <p style={{ fontSize:14, fontWeight:600, color:'#9ca3b8', margin:'0 0 4px' }}>
+            {search
+              ? 'No results found'
+              : tab === 'overdue' ? 'No overdue follow-ups!'
+              : tab === 'today'  ? 'All clear for today!'
+              : 'No follow-ups here'}
+          </p>
+          <p style={{ fontSize:12, color:'#6b7280', margin:0 }}>
+            {search ? `"${search}"` : ''}
           </p>
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(175px,1fr))', gap:12 }}>
           {leads.map(lead => (
-            <FollowupCard
+            <LeadCard
               key={lead._id ?? lead.id}
               lead={lead}
               onEdit={setEditLead}
               onDone={id => markDone.mutate(id)}
-              onSchedule={setScheduleLead}
+              onSchedule={setSched}
               isDoing={markDone.isPending}
             />
           ))}
         </div>
       )}
 
-      {/* Edit Modal — sirf basic lead fields update karta hai */}
+      {/* Modals */}
       <LeadModal
         open={!!editLead}
         lead={editLead}
@@ -490,22 +485,19 @@ export default function FollowupsPage() {
         onSave={handleSave}
         isSaving={updateM.isPending}
       />
-
-      {/* Schedule Modal — seedha /followup/leads/:id/follow-up endpoint */}
       <ScheduleModal
-        open={!!scheduleLead}
-        lead={scheduleLead}
-        onClose={() => setScheduleLead(null)}
+        open={!!sched}
+        lead={sched}
+        onClose={() => setSched(null)}
         onSave={handleSchedule}
         isSaving={scheduleM.isPending}
       />
-
     </div>
   )
 }
 
-const labelStyle: React.CSSProperties = {
-  fontSize: 11, fontWeight: 600, color: '#64748b',
-  textTransform: 'uppercase', letterSpacing: '0.04em',
-  display: 'block', marginBottom: 6,
+const labelS: React.CSSProperties = {
+  fontSize:11, fontWeight:600, color:'#9ca3b8',
+  textTransform:'uppercase', letterSpacing:'0.04em',
+  display:'block', marginBottom:6,
 }

@@ -13,17 +13,16 @@ interface Props {
   onStatusChange?: (id: string, status: LeadStatus) => void
 }
 
-// 🆕 Negotiation + Visitor added
 const STATUSES: LeadStatus[] = ['New', 'Contacted', 'Interested', 'Negotiation', 'Visitor', 'Closed', 'Lost']
 
 const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
-  New:         { bg: '#f0f9ff', color: '#0284c7' },
-  Contacted:   { bg: '#fffbeb', color: '#d97706' },
-  Interested:  { bg: '#f5f3ff', color: '#7c3aed' },
-  Negotiation: { bg: '#fdf4ff', color: '#9333ea' }, // 🆕
-  Visitor:     { bg: '#ecfeff', color: '#0891b2' }, // 🆕
-  Closed:      { bg: '#f0fdf4', color: '#16a34a' },
-  Lost:        { bg: '#fef2f2', color: '#dc2626' },
+  New:         { bg: 'rgba(2,132,199,.16)', color: '#38bdf8' },
+  Contacted:   { bg: 'rgba(2,132,199,.16)', color: '#f59e0b' },
+  Interested:  { bg: 'rgba(2,132,199,.16)', color: '#a78bfa' },
+  Negotiation: { bg: 'rgba(2,132,199,.16)', color: '#c084fc' }, 
+  Visitor:     { bg: 'rgba(2,132,199,.16)', color: '#22d3ee' }, 
+  Closed:      { bg: 'rgba(2,132,199,.16)', color: '#4ade80' },
+  Lost:        { bg: 'rgba(2,132,199,.16)', color: '#f87171' },
 }
 
 const StatusSelect = React.memo(function StatusSelect({
@@ -46,7 +45,7 @@ const StatusSelect = React.memo(function StatusSelect({
     onChange?.(lead._id ?? lead.id, next)
   }
 
-  const colors = STATUS_COLORS[localStatus] ?? { bg: '#f8fafc', color: '#64748b' }
+  const colors = STATUS_COLORS[localStatus] ?? { bg: '#3C3C3C', color: '#ffffff' }
 
   return (
     <select
@@ -79,13 +78,13 @@ const ContactCell = React.memo(function ContactCell({ lead }: { lead: Lead }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
       {lead.phone && (
-        <a href={`tel:${lead.phone}`} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#374151', textDecoration: 'none' }}>
+        <a href={`tel:${lead.phone}`} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#e2e8f0', textDecoration: 'none',background:'rgba(255,255,255,.04)',padding:'8px 10px',borderRadius:10,transition:'all .2s' }}>
           <Phone size={10} style={{ color: '#94a3b8' }} />
           {lead.phone}
         </a>
       )}
       {lead.email && (
-        <a href={`mailto:${lead.email}`} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#64748b', textDecoration: 'none', maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        <a href={`mailto:${lead.email}`} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#cbd5e1', textDecoration: 'none', maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           <Mail size={10} />
           {lead.email}
         </a>
@@ -101,7 +100,7 @@ const ContactCell = React.memo(function ContactCell({ lead }: { lead: Lead }) {
 })
 
 const SkeletonRow = () => (
-  <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+  <tr style={{ borderBottom: '1px solid rgba(255,255,255,.06)' }}>
     {[...Array(7)].map((_, i) => (
       <td key={i} style={{ padding: '12px 16px' }}>
         <div className="skeleton" style={{ height: 12, width: `${50 + (i * 17) % 40}%`, borderRadius: 6 }} />
@@ -115,17 +114,17 @@ function LeadsTable({ leads, isLoading, onEdit, onDelete, onFollowUp, onStatusCh
     return (
       <div style={{ padding: '64px 16px', textAlign: 'center' }}>
         <div style={{ fontSize: 40, marginBottom: 12 }}>🔍</div>
-        <p style={{ fontSize: 13, fontWeight: 600, color: '#64748b' }}>No leads found</p>
-        <p style={{ fontSize: 12, color: '#94a3b8', marginTop: 4 }}>Try adjusting your filters</p>
+        <p style={{ fontSize: 13, fontWeight: 600, color: '#ffffff' }}>No leads found</p>
+        <p style={{ fontSize: 12, color: '#ffffff', marginTop: 4 }}>Try adjusting your filters</p>
       </div>
     )
   }
 
   return (
-    <div style={{ overflowX: 'auto' }}>
+    <div style={{ overflowX: 'auto',background:'#3C3C3C' }}>
       <table style={{ width: '100%', fontSize: 13, borderCollapse: 'collapse' }}>
-        <thead>
-          <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+        <thead style={{background:'#3C3C3C'}} >
+          <tr style={{ borderBottom: '1px solid rgba(255,255,255,.06)' }}>
             <th className="thead-cell">Lead</th>
             <th className="thead-cell hidden md:table-cell">Contact</th>
             <th className="thead-cell">Source</th>
@@ -147,15 +146,15 @@ function LeadsTable({ leads, isLoading, onEdit, onDelete, onFollowUp, onStatusCh
                     key={rowKey}
                     className="tbody-row"
                     style={{ transition: 'background 120ms' }}
-                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#f8fafc'}
-                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = ''}
+                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,.03)'}
+                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
                   >
                     <td className="tbody-cell" style={{ cursor: 'pointer' }} onClick={() => onEdit(lead)}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <Avatar name={displayName} size={8} />
+                        <Avatar name={displayName} size={22} />
                         <div>
-                          <p style={{ fontWeight: 600, color: '#111827', fontSize: 13 }}>{displayName}</p>
-                          <p style={{ fontSize: 11, color: '#94a3b8' }}>{lead.email ?? lead.phone ?? '—'}</p>
+                          <p style={{ fontWeight: 600, color: '#94a3b8', fontSize: 13 }}>{displayName}</p>
+                          <p style={{ fontSize: 11, color: '#ffffff' }}>{lead.email ?? lead.phone ?? '—'}</p>
                         </div>
                       </div>
                     </td>
@@ -175,16 +174,16 @@ function LeadsTable({ leads, isLoading, onEdit, onDelete, onFollowUp, onStatusCh
                     <td className="tbody-cell hidden lg:table-cell" style={{ cursor: 'pointer' }} onClick={() => onEdit(lead)}>
                       {lead.followup_date ? (
                         <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
-                          <CalendarClock size={12} style={{ color: '#94a3b8' }} />
-                          <span style={{ color: new Date(lead.followup_date) < new Date() && !lead.followup_done ? '#dc2626' : '#475569' }}>
+                          <CalendarClock size={12} style={{ color: '#ffffff' }} />
+                          <span style={{ color: new Date(lead.followup_date) < new Date() && !lead.followup_done ? '#dc2626' : '#cbd5e1' }}>
                             {format(new Date(lead.followup_date), 'MMM d')}
                           </span>
                           {lead.followUp?.recurrence && lead.followUp.recurrence !== 'once' && (
-                            <span style={{ fontSize: 10, color: '#7c3aed', background: '#f5f3ff', padding: '1px 5px', borderRadius: 99 }}>🔄</span>
+                            <span style={{ fontSize: 10, color: '#ffffff', background: '#f5f3ff', padding: '1px 5px', borderRadius: 99 }}>🔄</span>
                           )}
                         </div>
                       ) : (
-                        <span style={{ fontSize: 11, color: '#cbd5e1' }}>—</span>
+                        <span style={{ fontSize: 11, color: '#010c1b' }}>—</span>
                       )}
                     </td>
 
@@ -216,8 +215,8 @@ function LeadsTable({ leads, isLoading, onEdit, onDelete, onFollowUp, onStatusCh
                         <button
                           type="button"
                           title="Edit Lead"
-                          style={{ padding: 5, borderRadius: 6, border: 'none', background: 'transparent', cursor: 'pointer', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                          onMouseEnter={e => (e.currentTarget as HTMLButtonElement).style.background = '#eff4ff'}
+                          style={{ padding: 5, borderRadius: 6, border: 'none', background: 'transparent', cursor: 'pointer', color: '#cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                          onMouseEnter={e => (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,.06)'}
                           onMouseLeave={e => (e.currentTarget as HTMLButtonElement).style.background = 'transparent'}
                           onClick={e => { e.preventDefault(); e.stopPropagation(); onEdit(lead) }}
                         >
@@ -228,7 +227,7 @@ function LeadsTable({ leads, isLoading, onEdit, onDelete, onFollowUp, onStatusCh
                           type="button"
                           title="Delete Lead"
                           style={{ padding: 5, borderRadius: 6, border: 'none', background: 'transparent', cursor: 'pointer', color: '#dc2626', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                          onMouseEnter={e => (e.currentTarget as HTMLButtonElement).style.background = '#fef2f2'}
+                          onMouseEnter={e => (e.currentTarget as HTMLButtonElement).style.background = 'rgba(239,68,68,.12)'}
                           onMouseLeave={e => (e.currentTarget as HTMLButtonElement).style.background = 'transparent'}
                           onClick={e => { e.preventDefault(); e.stopPropagation(); onDelete(lead._id ?? lead.id) }}
                         >

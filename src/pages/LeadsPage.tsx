@@ -74,26 +74,27 @@ export default function LeadsPage() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
 
       {/* Header */}
-      <div className="page-header">
+      <div className="page-header" style={{background:"#3C3C3C",border:"1px solid rgba(255,255,255,.08)",borderRadius:16,padding:"18px 22px",display:"flex",justifyContent:"space-between",alignItems:"center",boxShadow:"0 10px 30px rgba(0,0,0,.18)"}}>
         <div>
-          <h1 className="page-title">All Leads</h1>
-          <p className="page-sub">{total.toLocaleString()} leads · filtered view</p>
+          <h1 className="page-title" style={{color:"#ffffff",fontSize:28,fontWeight:800,margin:0}}>All Leads</h1>
+          <p className="page-sub" style={{color:"#94a3b8",marginTop:6}}>{total.toLocaleString()} leads · filtered view</p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-          <button className="btn-secondary" style={{ height: 36, fontSize: 13, gap: 5 }} onClick={() => setImportOpen(true)}>
+          <button className="btn-secondary" style={{ height: 36, fontSize: 13, gap: 5,background:"rgba(255,255,255,.06)",border:"1px solid rgba(255,255,255,.08)",color:"#ffffff",display:"flex",
+}} onClick={() => setImportOpen(true)}>
             <Upload size={13} /> Import
           </button>
-          <button className="btn-primary" style={{ height: 36 }} onClick={() => { setEditLead(null); setModalOpen(true) }}>
+          <button className="btn-primary" style={{ height: 36,padding:"0 18px",borderRadius:10,background:"linear-gradient(135deg,#2563eb,#4f46e5)", border:"none",color:"#fff",display:"flex",alignItems:"center"}} onClick={() => { setEditLead(null); setModalOpen(true) }}>
             <Plus size={14} /> Add Lead
           </button>
         </div>
       </div>
 
       {/* Table */}
-      <div className="card">
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px 0' }}>
-          <p style={{ fontSize: 13.5, fontWeight: 600, color: '#374151' }}>Leads</p>
-          <span style={{ fontSize: 12, color: '#94a3b8', background: '#f8fafc', padding: '2px 9px', borderRadius: 99, border: '1px solid #f1f5f9' }}>
+      <div className="card" style={{background:"#3C3C3C",border:"1px solid rgba(255,255,255,.08)",borderRadius:16,overflow:"hidden",boxShadow:"0 10px 30px rgba(0,0,0,.18)"}}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px 0',borderBottom:"1px solid rgba(255,255,255,.06)"}}>
+          <p style={{ fontSize: 13.5, fontWeight: 600, color: '#ffffff' }}>Leads</p>
+          <span style={{ fontSize: 12, color: '#cbd5e1', background: 'rgba(255,255,255,.06)', padding: '2px 9px', borderRadius: 99, border: '1px solid  rgba(255,255,255,.08)' }}>
             {total.toLocaleString()}
           </span>
         </div>
@@ -106,9 +107,10 @@ export default function LeadsPage() {
           onFollowUp={l => setFollowUpLead(l)}
           onStatusChange={handleStatusChange}
         />
-        <Pagination page={page} pageSize={20} total={total} onPageChange={setPage} />
-      </div>
-
+          <div style={{padding:"16px 20px",borderTop:"1px solid rgba(255,255,255,.06)",background:"rgba(255,255,255,.02)"}}>
+           <Pagination page={page} pageSize={20} total={total} onPageChange={setPage} />
+             </div>
+          </div>
       {/* Lead Modal */}
       <LeadModal
         open={modalOpen}
