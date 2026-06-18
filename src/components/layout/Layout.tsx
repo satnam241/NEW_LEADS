@@ -49,7 +49,6 @@ function useNotifications() {
 
   useEffect(() => {
     fetch_()
-    // Har 60 seconds mein refresh
     const interval = setInterval(fetch_, 60_000)
     return () => clearInterval(interval)
   }, [])
@@ -113,7 +112,9 @@ function NotificationPanel({
   return (
     <div style={{
       position: 'absolute', top: '110%', right: 0, zIndex: 9999,
-      width: 360, maxHeight: 520,
+      // Mobile mein full-width, desktop mein fixed 360px
+      width: 'min(360px, calc(100vw - 32px))',
+      maxHeight: '80vh',
       background: '#2a2d3e',
       border: '1px solid rgba(255,255,255,0.1)',
       borderRadius: 14,
@@ -159,7 +160,6 @@ function NotificationPanel({
 
             return (
               <div key={priority}>
-                {/* Group label */}
                 <div style={{
                   padding: '8px 16px 4px',
                   fontSize: 10.5, fontWeight: 700,
@@ -188,7 +188,6 @@ function NotificationPanel({
                     onMouseEnter={e => ((e.currentTarget as HTMLDivElement).style.background = cfg.bg)}
                     onMouseLeave={e => ((e.currentTarget as HTMLDivElement).style.background = 'transparent')}
                   >
-                    {/* Icon */}
                     <div style={{
                       width: 32, height: 32, borderRadius: 8, flexShrink: 0,
                       background: cfg.bg,
@@ -197,7 +196,6 @@ function NotificationPanel({
                       <Icon size={15} color={cfg.color} />
                     </div>
 
-                    {/* Content */}
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <p style={{
                         fontSize: 12.5, fontWeight: 600, color: '#fff',
@@ -255,8 +253,11 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
 
   return (
     <div style={{
-      background: '#3C3C3C', width: 282, height: 281,
-      padding: '14px 10px', position: 'relative',
+      background: '#3C3C3C',
+      width: 282,
+      height: 281,
+      padding: '14px 10px',
+      position: 'relative',
       borderRight: '1px solid rgba(255,255,255,0.06)',
       display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
       borderBottomRightRadius: '24px',
@@ -287,7 +288,7 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
                 display: 'flex', alignItems: 'center', gap: 20,
                 padding: '10px 13px', borderRadius: 10,
                 fontSize: 16.5, fontWeight: 500, textDecoration: 'none',
-                color: '#77a8ff',
+                color: active ? '#1a3a6e' : '#77a8ff',
                 background: active ? '#E8F0FF' : 'transparent',
                 transition: 'background 0.15s',
               }}
@@ -359,17 +360,15 @@ function Navbar({ onMenuClick }: { onMenuClick: () => void }) {
   const { notifications }       = useNotifications()
   const admin                   = useAdminProfile()
 
-  const [tooltip,      setTooltip]      = useState(false)
-  const [notifOpen,    setNotifOpen]    = useState(false)
+  const [tooltip,   setTooltip]   = useState(false)
+  const [notifOpen, setNotifOpen] = useState(false)
   const notifRef = useRef<HTMLDivElement>(null)
 
-  // Critical/high count for badge
   const urgentCount = notifications.filter(
     n => n.priority === 'critical' || n.priority === 'high'
   ).length
   const totalCount  = notifications.length
 
-  // Close panel on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
@@ -384,35 +383,50 @@ function Navbar({ onMenuClick }: { onMenuClick: () => void }) {
     window.location.href = `${API_BASE.replace('/api', '')}/api/google/auth`
   }
 
-  // Admin name — first word only for display
   const adminName    = admin?.name ?? 'Admin'
   const adminInitial = adminName.trim()[0]?.toUpperCase() ?? 'A'
 
   return (
     <header style={{
       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      background: '#565656', padding: '10px 24px', height: 60,
-      flexShrink: 0, borderBottom: '1px solid rgba(255,255,255,0.07)',
+      background: '#565656',
+      // Responsive padding: mobile mein thoda kam
+      padding: '10px 16px',
+      height: 60,
+      flexShrink: 0,
+      borderBottom: '1px solid rgba(255,255,255,0.07)',
+      // Overflow prevent karo taaki notif panel bahar na jaaye
+      position: 'relative',
     }}>
 
-      {/* Left — Admin Name */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      {/* Left — Menu + Admin Name */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, flex: 1 }}>
+        {/* Hamburger — always visible, desktop pe bhi (sidebar toggle) */}
         <button
-          className="md-hide"
           onClick={onMenuClick}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3b8', display: 'flex' }}
+          style={{
+            background: 'none', border: 'none', cursor: 'pointer',
+            color: '#9ca3b8', display: 'flex', flexShrink: 0,
+            padding: 4, borderRadius: 6,
+          }}
+          aria-label="Open menu"
         >
           <Menu size={20} />
         </button>
-        <span style={{ fontSize: 21, fontWeight: 700, color: '#fff' }}>
+
+        <span style={{
+          fontSize: 'clamp(15px, 3vw, 21px)',
+          fontWeight: 700, color: '#fff',
+          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+        }}>
           Welcome, <span style={{ color: '#A8CCFF' }}>{adminName}</span>
         </span>
       </div>
 
       {/* Right */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
 
-        {/* Google Calendar */}
+        {/* Google Calendar — mobile pe sirf icon show karo */}
         {!checking && (
           connected ? (
             <div
@@ -420,7 +434,8 @@ function Navbar({ onMenuClick }: { onMenuClick: () => void }) {
               onMouseEnter={() => setTooltip(true)}
               onMouseLeave={() => setTooltip(false)}
             >
-              <div style={{
+              {/* Desktop: full button */}
+              <div className="cal-btn-full" style={{
                 display: 'flex', alignItems: 'center', gap: 7,
                 padding: '7px 13px',
                 background: 'rgba(22,163,74,0.15)',
@@ -429,7 +444,7 @@ function Navbar({ onMenuClick }: { onMenuClick: () => void }) {
                 fontWeight: 600, fontSize: 12, cursor: 'default',
               }}>
                 <CalendarCheck size={14} />
-                Connected
+                <span className="cal-label">Connected</span>
               </div>
               {tooltip && (
                 <div style={{
@@ -449,7 +464,7 @@ function Navbar({ onMenuClick }: { onMenuClick: () => void }) {
               onClick={handleConnect}
               style={{
                 display: 'flex', alignItems: 'center', gap: 7,
-                padding: '7px 13px',
+                padding: '7px 10px',
                 background: 'rgba(76,111,245,0.15)',
                 border: '1px solid rgba(76,111,245,0.4)',
                 borderRadius: 10, color: '#77a8ff',
@@ -460,12 +475,12 @@ function Navbar({ onMenuClick }: { onMenuClick: () => void }) {
               onMouseLeave={e => ((e.currentTarget as HTMLElement).style.background = 'rgba(76,111,245,0.15)')}
             >
               <CalendarPlus size={14} />
-              Connect Calendar
+              <span className="cal-label">Connect Calendar</span>
             </button>
           )
         )}
 
-        {/* ── Notification Bell ── */}
+        {/* Notification Bell */}
         <div ref={notifRef} style={{ position: 'relative' }}>
           <button
             onClick={() => setNotifOpen(o => !o)}
@@ -477,11 +492,11 @@ function Navbar({ onMenuClick }: { onMenuClick: () => void }) {
               cursor: 'pointer', color: '#fff',
               transition: 'background 0.15s',
               boxShadow: urgentCount > 0 ? '0 0 0 3px rgba(239,68,68,0.3)' : 'none',
+              flexShrink: 0,
             }}
+            aria-label="Notifications"
           >
             <Bell size={16} />
-
-            {/* Badge — total count */}
             {totalCount > 0 && (
               <span style={{
                 position: 'absolute', top: -4, right: -4,
@@ -497,7 +512,6 @@ function Navbar({ onMenuClick }: { onMenuClick: () => void }) {
             )}
           </button>
 
-          {/* Notification Panel */}
           {notifOpen && (
             <NotificationPanel
               notifications={notifications}
@@ -506,7 +520,7 @@ function Navbar({ onMenuClick }: { onMenuClick: () => void }) {
           )}
         </div>
 
-        {/* ── Admin Avatar ── */}
+        {/* Admin Avatar */}
         <div style={{
           width: 36, height: 36, borderRadius: '50%',
           background: 'linear-gradient(135deg, #4c6ef5, #77a8ff)',
@@ -514,8 +528,10 @@ function Navbar({ onMenuClick }: { onMenuClick: () => void }) {
           fontWeight: 700, fontSize: 14,
           border: '2px solid rgba(255,255,255,0.2)',
           cursor: 'pointer', color: '#fff',
-          title: adminName,
-        }}>
+          flexShrink: 0,
+        }}
+          title={adminName}
+        >
           {adminInitial}
         </div>
       </div>
@@ -525,46 +541,110 @@ function Navbar({ onMenuClick }: { onMenuClick: () => void }) {
 
 // ─── App Layout ────────────────────────────────────────────────
 export default function AppLayout() {
-  const [mobileOpen, setMobileOpen] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden', background: '#3C3C3C' }}>
-      <Navbar onMenuClick={() => setMobileOpen(true)} />
+      <Navbar onMenuClick={() => setSidebarOpen(true)} />
 
-      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-        {/* Desktop sidebar */}
-        <aside className="md-sidebar" style={{ width: 300, display: 'none', alignSelf: 'flex-start', flexShrink: 0, marginBottom: 'auto' }}>
+      <div style={{ display: 'flex', flex: 1, overflow: 'hidden', position: 'relative' }}>
+
+        {/* Desktop sidebar — md+ pe fixed left mein rehta hai */}
+        <aside className="desktop-sidebar" style={{ alignSelf: 'flex-start', flexShrink: 0 }}>
           <SidebarContent />
         </aside>
 
-        {/* Mobile drawer */}
-        {mobileOpen && (
+        {/* Mobile/Tablet drawer — overlay style */}
+        {sidebarOpen && (
           <div style={{ position: 'fixed', inset: 0, zIndex: 300, display: 'flex' }}>
+            {/* Backdrop */}
             <div
-              style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)' }}
-              onClick={() => setMobileOpen(false)}
+              style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)' }}
+              onClick={() => setSidebarOpen(false)}
             />
+            {/* Drawer */}
             <div style={{ position: 'relative', zIndex: 1, animation: 'slideRight 200ms ease both' }}>
-              <SidebarContent onClose={() => setMobileOpen(false)} />
+              <SidebarContent onClose={() => setSidebarOpen(false)} />
             </div>
           </div>
         )}
 
         {/* Page content */}
-        <main style={{
-          flex: 1, overflowY: 'auto',
-          padding: '24px 24px 24px 0',
-          marginLeft: -300, width: 'calc(100% + 300px)', paddingLeft: 324,
-        }}>
+        <main className="main-content" style={{ flex: 1, overflowY: 'auto' }}>
           <Outlet />
         </main>
       </div>
 
       <style>{`
-        @keyframes slideRight { from{opacity:0;transform:translateX(-100%)} to{opacity:1;transform:translateX(0)} }
+        @keyframes slideRight {
+          from { opacity: 0; transform: translateX(-100%); }
+          to   { opacity: 1; transform: translateX(0); }
+        }
+
+        /* ── Mobile (<768px) ─────────────────────────── */
+        .desktop-sidebar { display: none !important; }
+
+        .main-content {
+          padding: 16px 12px;
+          width: 100%;
+        }
+
+        /* Calendar label chhupa do mobile pe */
+        .cal-label { display: none; }
+
+        /* ── Tablet (768px – 1023px) ─────────────────── */
         @media (min-width: 768px) {
-          .md-sidebar { display: block !important; }
-          .md-hide    { display: none  !important; }
+          .desktop-sidebar { display: block !important; }
+
+          .main-content {
+            padding: 20px 20px 20px 0;
+            /* sidebar width offset */
+            margin-left: -282px;
+            width: calc(100% + 282px);
+            padding-left: 302px;
+          }
+
+          header { padding: 10px 20px !important; }
+        }
+
+        /* ── Desktop (1024px+) ───────────────────────── */
+        @media (min-width: 1024px) {
+          .cal-label { display: inline !important; }
+
+          .main-content {
+            padding: 24px 24px 24px 0;
+            margin-left: -282px;
+            width: calc(100% + 282px);
+            padding-left: 306px;
+          }
+
+          header { padding: 10px 24px !important; }
+        }
+
+        /* ── Large Desktop (1280px+) ─────────────────── */
+        @media (min-width: 1280px) {
+          .main-content {
+            padding-left: 320px;
+          }
+        }
+
+        /* Prevent notif panel overflow on small screens */
+        @media (max-width: 400px) {
+          .notif-panel {
+            right: -8px !important;
+          }
+        }
+
+        /* Touch devices pe hover effects off */
+        @media (hover: none) {
+          button:hover, a:hover { opacity: 0.85; }
+        }
+
+        /* Safe area padding for notched phones */
+        @supports (padding-bottom: env(safe-area-inset-bottom)) {
+          .main-content {
+            padding-bottom: max(16px, env(safe-area-inset-bottom));
+          }
         }
       `}</style>
     </div>

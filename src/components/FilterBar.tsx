@@ -1,4 +1,3 @@
-
 import { Search, X, Calendar } from 'lucide-react'
 import type { LeadFilters, LeadStatus, LeadSource } from '@/types'
 
@@ -95,7 +94,11 @@ export default function FilterBar({
         </select>
 
         {/* Date range */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        {/* ✅ flexWrap added — on narrow phones this block no longer
+            overflows and gets clipped by the card's overflow:hidden;
+            it now breaks onto its own internal line(s) instead. No
+            visual change at any width where it already fit on one line. */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
           <Calendar size={13} style={{ color: '#94a3b8', flexShrink: 0 }} />
           <input type="date" className="input-base"
             style={{ height: 36, fontSize: 12 ,

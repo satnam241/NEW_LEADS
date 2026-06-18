@@ -1,151 +1,3 @@
-
-
-// import { useState } from 'react'
-// import { Plus, Upload } from 'lucide-react'
-// import StatCards from '@/components/StatCards'
-// import FilterBar from '@/components/FilterBar'
-// import LeadsTable from '@/components/LeadsTable'
-// import Pagination from '@/components/Pagination'
-// import LeadModal from '@/components/modals/LeadModal'
-// import FollowUpModal from '@/components/modals/FollowUpModal'
-// import ConfirmDialog from '@/components/modals/ConfirmDialog'
-// import ImportModal from '@/components/modals/ImportModal'
-// import ExportDropdown from '@/components/modals/ExportDropdown'
-// import { useLeads, useCreateLead, useUpdateLead, useDeleteLead, useScheduleFollowUp } from '@/hooks/useLeads'
-// import type { Lead, LeadFilters, LeadInsert, LeadStatus, FollowUpRecurrence } from '@/types'
-
-// const DEFAULT_FILTERS: LeadFilters = { search: '', status: '', source: '', dateFrom: '', dateTo: '' }
-
-// export default function Dashboard() {
-//   const [filters, setFilters]           = useState<LeadFilters>(DEFAULT_FILTERS)
-//   const [page, setPage]                 = useState(1)
-//   const [modalOpen, setModalOpen]       = useState(false)
-//   const [editLead, setEditLead]         = useState<Lead | null>(null)
-//   const [followUpLead, setFollowUpLead] = useState<Lead | null>(null)
-//   const [deleteId, setDeleteId]         = useState<string | null>(null)
-//   const [importOpen, setImportOpen]     = useState(false)
-
-//   const { data, isLoading } = useLeads(filters, page)
-//   const leads = data?.data ?? []
-//   const total = data?.count ?? 0
-
-//   const createM   = useCreateLead()
-//   const updateM   = useUpdateLead()
-//   const deleteM   = useDeleteLead()
-//   const scheduleM = useScheduleFollowUp()
-
-//   const handleFilters = (f: LeadFilters) => { setFilters(f); setPage(1) }
-
-//   const handleSave = async (d: LeadInsert) => {
-//     if (editLead) await updateM.mutateAsync({ id: editLead._id ?? editLead.id, updates: d })
-//     else          await createM.mutateAsync(d)
-//     setModalOpen(false)
-//     setEditLead(null)
-//   }
-
-//   const handleFollowUpSave = async (payload: {
-//     date?: string
-//     message?: string
-//     recurrence: FollowUpRecurrence
-//     whatsappOptIn: boolean
-//     done?: boolean
-//   }) => {
-//     if (!followUpLead) return
-//     const id = followUpLead._id ?? followUpLead.id
-//     await scheduleM.mutateAsync({
-//       id,
-//       payload: {
-//         date:          payload.date,
-//         message:       payload.message,
-//         recurrence:    payload.recurrence,
-//         whatsappOptIn: payload.whatsappOptIn,
-//       },
-//     })
-//     if (payload.done) {
-//       await updateM.mutateAsync({ id, updates: { followup_done: true } })
-//     }
-//     setFollowUpLead(null)
-//   }
-
-//   const handleStatusChange = (id: string, status: LeadStatus) => {
-//     updateM.mutate({ id, updates: { status } })
-//   }
-
-//   return (
-//     <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
-
-//       {/* Header */}
-//       <div className="page-header">
-//         <div>
-//           <h1 className="page-title">Dashboard</h1>
-//           <p className="page-sub">Your leads overview at a glance</p>
-//         </div>
-//         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-//           <button className="btn-secondary" style={{ height: 36, fontSize: 13 }} onClick={() => setImportOpen(true)}>
-//             <Upload size={13} /> Import
-//           </button>
-//           <ExportDropdown leads={leads} />
-//           <button className="btn-primary" style={{ height: 36 }} onClick={() => { setEditLead(null); setModalOpen(true) }}>
-//             <Plus size={14} /> Add Lead
-//           </button>
-//         </div>
-//       </div>
-
-//       {/* Stats */}
-//       <StatCards />
-
-//       {/* Table */}
-//       <div className="card">
-//         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px 0' }}>
-//           <p style={{ fontSize: 13.5, fontWeight: 600, color: '#374151' }}>Recent Leads</p>
-//           <span style={{ fontSize: 12, color: '#94a3b8', background: '#f8fafc', padding: '2px 9px', borderRadius: 99, border: '1px solid #f1f5f9' }}>
-//             {total.toLocaleString()}
-//           </span>
-//         </div>
-//         <FilterBar filters={filters} onChange={handleFilters} />
-//         <LeadsTable
-//           leads={leads}
-//           isLoading={isLoading}
-//           onEdit={l => { setEditLead(l); setModalOpen(true) }}
-//           onDelete={id => setDeleteId(id)}
-//           onFollowUp={l => setFollowUpLead(l)}
-//           onStatusChange={handleStatusChange}
-//         />
-//         <Pagination page={page} pageSize={20} total={total} onPageChange={setPage} />
-//       </div>
-
-//       {/* Lead Modal */}
-//       <LeadModal
-//         open={modalOpen}
-//         lead={editLead}
-//         onClose={() => { setModalOpen(false); setEditLead(null) }}
-//         onSave={handleSave}
-//         isSaving={createM.isPending || updateM.isPending}
-//       />
-
-//       {/* Follow-up Modal */}
-//       <FollowUpModal
-//         open={!!followUpLead}
-//         lead={followUpLead}
-//         onClose={() => setFollowUpLead(null)}
-//         onSave={handleFollowUpSave}
-//         isSaving={scheduleM.isPending || updateM.isPending}
-//       />
-
-//       <ConfirmDialog
-//         open={!!deleteId}
-//         title="Delete lead?"
-//         message="This is permanent and cannot be undone."
-//         onConfirm={async () => { await deleteM.mutateAsync(deleteId!); setDeleteId(null) }}
-//         onCancel={() => setDeleteId(null)}
-//         isLoading={deleteM.isPending}
-//       />
-//       <ImportModal open={importOpen} onClose={() => setImportOpen(false)} />
-//     </div>
-//   )
-// }
-
-
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { Search, ChevronDown } from 'lucide-react'
 import {  useStats, useMonthlyReport, useLeads, useFollowups, useRealtime } from '@/hooks/useLeads'
@@ -162,19 +14,48 @@ const FORM_NAME_MAP: Record<string, string> = {
 }
 
 // ─────────────────────────────────────────────────────────────────
+// Responsive helper — breakpoints for mobile / tablet / desktop(mac)
+// (mobile <640px, tablet 640–1023px, desktop/mac ≥1024px)
+// ✅ Same approach as the existing month-dropdown / bar-chart logic —
+//    plain useState + resize listener, no extra deps.
+// ─────────────────────────────────────────────────────────────────
+function useViewport() {
+  const [width, setWidth] = useState(
+    typeof window !== 'undefined' ? window.innerWidth : 1280
+  )
+
+  useEffect(() => {
+    const onResize = () => setWidth(window.innerWidth)
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
+
+  return {
+    width,
+    isMobile:  width < 640,
+    isTablet:  width >= 640 && width < 1024,
+    isDesktop: width >= 1024,
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
 // Ring Chart  (unchanged — center fix already applied)
+// ✅ size/strokeWidth are optional now so the dashboard can shrink the
+//    rings a bit on mobile. Defaults (115 / 14) match the original
+//    exactly, so desktop/tablet rendering is byte-for-byte the same.
 // ─────────────────────────────────────────────────────────────────
 interface RingProps {
   value: number; max: number; color: string
   label: string; sublabel?: string; note?: string
+  size?: number; strokeWidth?: number
 }
-function Ring({ value, max, color, label, sublabel, note }: RingProps) {
-  const size   = 115
-  const stroke = 14
+function Ring({ value, max, color, label, sublabel, note, size = 115, strokeWidth = 14 }: RingProps) {
+  const stroke = strokeWidth
   const r      = (size - stroke) / 2
   const circ   = 2 * Math.PI * r
   const pct    = max > 0 ? Math.min(value / max, 1) : 0
   const dash   = pct * circ
+  const valueFontSize = Math.round(size * 0.243)   // ✅ keeps the same proportions as the original 28px @ 115px
 
   return (
     <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:7 }}>
@@ -187,7 +68,7 @@ function Ring({ value, max, color, label, sublabel, note }: RingProps) {
         <div style={{
           position:'absolute', top:'50%', left:'50%',
           transform:'translate(-50%, -46%)',
-          fontSize:28, fontWeight:700, color:'#fff', lineHeight:1, whiteSpace:'nowrap',
+          fontSize:valueFontSize, fontWeight:700, color:'#fff', lineHeight:1, whiteSpace:'nowrap',
         }}>
           {value}
         </div>
@@ -203,6 +84,7 @@ function Ring({ value, max, color, label, sublabel, note }: RingProps) {
 
 // ─────────────────────────────────────────────────────────────────
 // Bar Chart — full month days, horizontal scroll, today highlighted
+// (unchanged — already handles small screens via its own horizontal scroll)
 // ─────────────────────────────────────────────────────────────────
 interface BarItem { day: number; count: number }
 
@@ -281,6 +163,10 @@ function MiniBarChart({ data, highlightDay }: { data: BarItem[]; highlightDay: n
 export default function DashboardHome() {
   useRealtime()   // ✅ keeps leads/stats/followups fresh every 30s — "abhi ayi" leads show up live
 
+  // ✅ Responsive flags — drives layout-only tweaks below (grid stacking,
+  //    padding, ring size, table scroll). No data/logic depends on this.
+  const { isMobile, isTablet, isDesktop } = useViewport()
+
   const [search, setSearch] = useState('')
   const navigate = useNavigate()
   const now      = new Date()
@@ -340,6 +226,11 @@ export default function DashboardHome() {
   const dateStr = `${now.getDate()}/${now.getMonth()+1}/${String(now.getFullYear()).slice(2)}`
   const cardStyle: React.CSSProperties = { background:'#565656', borderRadius:14 }
 
+  // ✅ Ring size shrinks a touch on mobile only — tablet/desktop keep the
+  //    original 115/14 so nothing changes above the mobile breakpoint.
+  const ringSize   = isMobile ? 80 : 115
+  const ringStroke = isMobile ? 10 : 14
+
   // ── Helpers ───────────────────────────────────────────────────
   const trunc = (s?: string | null, n = 20) =>
     s && s.length > n ? s.slice(0, n) + '…' : (s ?? '—')
@@ -379,30 +270,41 @@ export default function DashboardHome() {
   }
 
   return (
-    <div style={{ display:'flex', flexDirection:'column', gap:16, margin:'25px 0 0 0' }}>
+    <div style={{
+      display:'flex', flexDirection:'column',
+      gap: isMobile ? 12 : isTablet ? 14 : 16,
+      margin: isMobile ? '16px 0 0 0' : isTablet ? '20px 0 0 0' : '25px 0 0 0',
+    }}>
 
       {/* ── ROW 1: Analytics + Bar Chart ── */}
-      <div style={{ display:'grid', gridTemplateColumns:'1.25fr 1fr', gap:10, background:'#565656', borderRadius:'8px', padding:'20px 0' }}>
+      {/* ✅ Side-by-side stays desktop/mac only (≥1024px). Tablet & mobile
+          stack into a single column so the 3 rings + chart never get cramped. */}
+      <div style={{
+        display:'grid',
+        gridTemplateColumns: isDesktop ? '1.25fr 1fr' : '1fr',
+        gap:10, background:'#565656', borderRadius:'8px',
+        padding: isMobile ? '14px 0' : '20px 0',
+      }}>
 
         {/* Analytics */}
-        <div style={{ ...cardStyle, padding:'20px 26px' }}>
-          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:20 }}>
+        <div style={{ ...cardStyle, padding: isMobile ? '16px 14px' : isTablet ? '18px 20px' : '20px 26px' }}>
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:20, flexWrap:'wrap', gap:8 }}>
             <h2 style={{ fontSize:19, fontWeight:700, color:'#fff', margin:0 }}>Analytics</h2>
             <span style={{ fontSize:12.5, color:'#9ca3b8' }}>
               Date: <strong style={{ color:'#fff' }}>{dateStr}</strong>
             </span>
           </div>
-          <div style={{ display:'flex', justifyContent:'space-around', alignItems:'flex-start' }}>
-            <Ring value={presentCount}  max={ringMax} color="#A8CCFF"
+          <div style={{ display:'flex', justifyContent:'space-around', alignItems:'flex-start', flexWrap:'wrap', gap:12 }}>
+            <Ring value={presentCount}  max={ringMax} color="#A8CCFF" size={ringSize} strokeWidth={ringStroke}
               label={`Present | ${MONTH_SHORT[selMonth-1]}`}
               sublabel={`${st.total} leads in ${MONTH_SHORT[selMonth-1]}`}
               note={growthNote}
             />
-            <Ring value={verifiedCount} max={ringMax} color="#A8CCFF"
+            <Ring value={verifiedCount} max={ringMax} color="#A8CCFF" size={ringSize} strokeWidth={ringStroke}
               label={`Verified | ${MONTH_SHORT[selMonth-1]}`}
               sublabel="In conversation"
             />
-            <Ring value={dismissCount}  max={ringMax} color="#A8CCFF"
+            <Ring value={dismissCount}  max={ringMax} color="#A8CCFF" size={ringSize} strokeWidth={ringStroke}
               label={`Dismisss | ${MONTH_SHORT[selMonth-1]}`}
               sublabel="Closed / Lost"
             />
@@ -410,14 +312,17 @@ export default function DashboardHome() {
         </div>
 
         {/* Bar Chart — with working month dropdown */}
-        <div style={{ ...cardStyle, padding:'18px 20px', background:'#3C3C3C', margin:'0 10px 0 0' }}>
-          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:12 }}>
+        <div style={{
+          ...cardStyle, padding: isMobile ? '14px 14px' : '18px 20px',
+          background:'#3C3C3C', margin: isDesktop ? '0 10px 0 0' : 0,
+        }}>
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:12, flexWrap:'wrap', gap:8 }}>
             <h3 style={{ fontSize:10.5, fontWeight:700, color:'#9ca3b8', letterSpacing:'0.06em', textTransform:'uppercase', margin:0 }}>
               {MONTH_FULL[selMonth-1]} Working Progress
             </h3>
 
             {/* ✅ Functional month dropdown — same visual style as old "Month ▾" */}
-           
+
            <div style={{ position:'relative', display:'flex', alignItems:'center' }}>
   <select
     value={selMonth}
@@ -450,137 +355,157 @@ export default function DashboardHome() {
       </div>
 
       {/* ── ROW 2: Recent Leads + Follow-ups ── */}
+      {/* ✅ The "calc(100% + 300px)" full-bleed trick is a desktop/mac-only
+          layout escape — disabled on tablet/mobile so nothing clips or
+          scrolls the whole page sideways on smaller screens. */}
       <div style={{
-        display:'grid', gridTemplateColumns:'minmax(0,2fr) 518px',
-        gap:18, width:'calc(100% + 300px)', marginLeft:-300,
+        display:'grid',
+        gridTemplateColumns: isDesktop ? 'minmax(0,2fr) 518px' : '1fr',
+        gap: isMobile ? 14 : isTablet ? 16 : 18,
+        width: isDesktop ? 'calc(100% + 300px)' : '100%',
+        marginLeft: isDesktop ? -300 : 0,
       }}>
 
         {/* Recent Leads */}
         <div style={{ ...cardStyle, overflow:'hidden', width:'100%' }}>
-          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'18px 20px 12px' }}>
+          <div style={{
+            display:'flex', alignItems:'center', justifyContent:'space-between',
+            padding: isMobile ? '14px 14px 10px' : '18px 20px 12px',
+            flexWrap:'wrap', gap:8,
+          }}>
             <h2 style={{ fontSize:19, fontWeight:700, color:'#fff', margin:0 }}>Recent Leads</h2>
             <div style={{ display:'flex', alignItems:'center', gap:7, background:'#1e2130', border:'1px solid rgba(255,255,255,0.1)', borderRadius:50, padding:'6px 14px' }}>
               <Search size={13} color="#6b7280"/>
               <input
                 value={search} onChange={e => setSearch(e.target.value)} placeholder="Search"
-                style={{ background:'none', border:'none', outline:'none', color:'#9ca3b8', fontSize:12.5, fontFamily:'inherit', width:90 }}
+                style={{ background:'none', border:'none', outline:'none', color:'#9ca3b8', fontSize:12.5, fontFamily:'inherit', width: isMobile ? 70 : 90 }}
               />
             </div>
           </div>
 
-          {/* ✅ Table headers — 6 columns matching backend fields */}
-          <div style={{
-            display:'grid',
-            gridTemplateColumns: '1.45fr 1.05fr 0.95fr 0.7fr 1.05fr 0.6fr',
-            padding:'7px 20px',
-            borderTop:'1px solid rgba(255,255,255,0.06)',
-            borderBottom:'1px solid rgba(255,255,255,0.06)',
-          }}>
-            {['Lead Name', 'Email', 'Source', 'Budget', 'Message', 'Time'].map(h => (
-              <span key={h} style={{ fontSize:10.5, color:'#9ca3b8', fontWeight:600 }}>{h}</span>
-            ))}
-          </div>
+          {/* ✅ Table headers + rows share one horizontally-scrollable wrapper
+              on tablet/mobile so all 6 columns stay exactly the same widths/
+              design — you just swipe sideways to see the rest, instead of
+              the columns getting redesigned or squeezed. Desktop/mac is
+              untouched (overflow visible, no min-width). */}
+          <div style={{ overflowX: isDesktop ? 'visible' : 'auto', WebkitOverflowScrolling:'touch' }}>
+            <div style={{ minWidth: isDesktop ? 'auto' : 640 }}>
 
-          {/* Rows */}
-          {loadingLeads ? (
-            <div style={{ padding:'14px 20px' }}>
-              {[...Array(3)].map((_,i) => (
-                <div key={i} style={{ height:42, background:'rgba(255,255,255,0.04)', borderRadius:8, marginBottom:8 }}/>
-              ))}
-            </div>
-          ) : recentLeads.length === 0 ? (
-            <div style={{ padding:'30px 20px', textAlign:'center', color:'#6b7280', fontSize:13 }}>
-              No leads found
-            </div>
-          ) : (
-            recentLeads.slice(0, 6).map((lead: Lead) => {
-              const raw = lead as any
+              {/* ✅ Table headers — 6 columns matching backend fields */}
+              <div style={{
+                display:'grid',
+                gridTemplateColumns: '1.45fr 1.05fr 0.95fr 0.7fr 1.05fr 0.6fr',
+                padding:'7px 20px',
+                borderTop:'1px solid rgba(255,255,255,0.06)',
+                borderBottom:'1px solid rgba(255,255,255,0.06)',
+              }}>
+                {['Lead Name', 'Email', 'Source', 'Budget', 'Message', 'Time'].map(h => (
+                  <span key={h} style={{ fontSize:10.5, color:'#9ca3b8', fontWeight:600 }}>{h}</span>
+                ))}
+              </div>
 
-              const name  = raw.fullName ?? lead.name ?? '—'
-              const phone = lead.phone   ?? raw.phone  ?? '—'
-              const email = lead.email   ?? raw.email  ?? '—'
-
-              // ✅ Source + form name (mapped if known, else capitalized source) + formId badge
-              const source   = (lead.source ?? raw.source ?? 'direct') as string
-              const formId   = raw.formId ? String(raw.formId) : null
-              const formName = (formId && FORM_NAME_MAP[formId])
-                ?? (source.charAt(0).toUpperCase() + source.slice(1))
-
-              // ✅ Budget from extraFields
-              const budget = fmtBudget(raw.extraFields?.what_is_your_budget_ ?? raw.message)
-
-              // ✅ Message — CRM note first, else purchase-timeline as intent message
-              const message = lead.note
-                ?? fmtTimeline(raw.extraFields?.when_are_you_planning_to_purchase_)
-
-              // ✅ Time ago — "1m ago / 1h ago / 1d ago"
-              const arrived = timeAgo(raw.receivedAt ?? raw.createdAt ?? lead.created_at)
-
-              return (
-                <div
-                  key={lead._id ?? lead.id ?? raw._id}
-                  onClick={() => navigate('/leads')}
-                  style={{
-                    display:'grid',
-                    gridTemplateColumns: '1.45fr 1.05fr 0.95fr 0.7fr 1.05fr 0.6fr',
-                    padding:'8px 20px',
-                    borderBottom:'1px solid rgba(255,255,255,0.04)',
-                    alignItems:'center',
-                    cursor:'pointer',
-                    transition:'background 0.15s',
-                  }}
-                  onMouseEnter={e => ((e.currentTarget as HTMLDivElement).style.background = 'rgba(255,255,255,0.035)')}
-                  onMouseLeave={e => ((e.currentTarget as HTMLDivElement).style.background = 'transparent')}
-                >
-                  {/* Name + Phone */}
-                  <div style={{ minWidth:0 }}>
-                    <p style={{ fontSize:12.5, color:'#fff', fontWeight:500, margin:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
-                      {name}
-                    </p>
-                    <p style={{ fontSize:10.5, color:'#9ca3b8', margin:'1px 0 0' }}>
-                      {phone}
-                    </p>
-                  </div>
-
-                  {/* Email */}
-                  <p style={{ fontSize:11, color:'#9ca3b8', margin:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
-                    {trunc(email, 22)}
-                  </p>
-
-                  {/* Source / Form */}
-                  <div style={{ minWidth:0 }}>
-                    <p style={{ fontSize:11.5, color:'#A8CCFF', margin:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
-                      {formName}
-                    </p>
-                    {formId && (
-                      <p style={{ fontSize:9.5, color:'#4b5563', margin:'1px 0 0' }}>
-                        #{formId.slice(-6)}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Budget */}
-                  <p style={{ fontSize:11.5, color:'#22c55e', fontWeight:500, margin:0 }}>
-                    {budget}
-                  </p>
-
-                  {/* Message */}
-                  <p style={{ fontSize:11, color:'#c4cad8', margin:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
-                    {trunc(message, 26)}
-                  </p>
-
-                  {/* Time ago */}
-                  <p style={{ fontSize:11, color:'#9ca3b8', margin:0 }}>
-                    {arrived}
-                  </p>
+              {/* Rows */}
+              {loadingLeads ? (
+                <div style={{ padding:'14px 20px' }}>
+                  {[...Array(3)].map((_,i) => (
+                    <div key={i} style={{ height:42, background:'rgba(255,255,255,0.04)', borderRadius:8, marginBottom:8 }}/>
+                  ))}
                 </div>
-              )
-            })
-          )}
+              ) : recentLeads.length === 0 ? (
+                <div style={{ padding:'30px 20px', textAlign:'center', color:'#6b7280', fontSize:13 }}>
+                  No leads found
+                </div>
+              ) : (
+                recentLeads.slice(0, 6).map((lead: Lead) => {
+                  const raw = lead as any
+
+                  const name  = raw.fullName ?? lead.name ?? '—'
+                  const phone = lead.phone   ?? raw.phone  ?? '—'
+                  const email = lead.email   ?? raw.email  ?? '—'
+
+                  // ✅ Source + form name (mapped if known, else capitalized source) + formId badge
+                  const source   = (lead.source ?? raw.source ?? 'direct') as string
+                  const formId   = raw.formId ? String(raw.formId) : null
+                  const formName = (formId && FORM_NAME_MAP[formId])
+                    ?? (source.charAt(0).toUpperCase() + source.slice(1))
+
+                  // ✅ Budget from extraFields
+                  const budget = fmtBudget(raw.extraFields?.what_is_your_budget_ ?? raw.message)
+
+                  // ✅ Message — CRM note first, else purchase-timeline as intent message
+                  const message = lead.note
+                    ?? fmtTimeline(raw.extraFields?.when_are_you_planning_to_purchase_)
+
+                  // ✅ Time ago — "1m ago / 1h ago / 1d ago"
+                  const arrived = timeAgo(raw.receivedAt ?? raw.createdAt ?? lead.created_at)
+
+                  return (
+                    <div
+                      key={lead._id ?? lead.id ?? raw._id}
+                      onClick={() => navigate('/leads')}
+                      style={{
+                        display:'grid',
+                        gridTemplateColumns: '1.45fr 1.05fr 0.95fr 0.7fr 1.05fr 0.6fr',
+                        padding:'8px 20px',
+                        borderBottom:'1px solid rgba(255,255,255,0.04)',
+                        alignItems:'center',
+                        cursor:'pointer',
+                        transition:'background 0.15s',
+                      }}
+                      onMouseEnter={e => ((e.currentTarget as HTMLDivElement).style.background = 'rgba(255,255,255,0.035)')}
+                      onMouseLeave={e => ((e.currentTarget as HTMLDivElement).style.background = 'transparent')}
+                    >
+                      {/* Name + Phone */}
+                      <div style={{ minWidth:0 }}>
+                        <p style={{ fontSize:12.5, color:'#fff', fontWeight:500, margin:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                          {name}
+                        </p>
+                        <p style={{ fontSize:10.5, color:'#9ca3b8', margin:'1px 0 0' }}>
+                          {phone}
+                        </p>
+                      </div>
+
+                      {/* Email */}
+                      <p style={{ fontSize:11, color:'#9ca3b8', margin:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                        {trunc(email, 22)}
+                      </p>
+
+                      {/* Source / Form */}
+                      <div style={{ minWidth:0 }}>
+                        <p style={{ fontSize:11.5, color:'#A8CCFF', margin:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                          {formName}
+                        </p>
+                        {formId && (
+                          <p style={{ fontSize:9.5, color:'#4b5563', margin:'1px 0 0' }}>
+                            #{formId.slice(-6)}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Budget */}
+                      <p style={{ fontSize:11.5, color:'#22c55e', fontWeight:500, margin:0 }}>
+                        {budget}
+                      </p>
+
+                      {/* Message */}
+                      <p style={{ fontSize:11, color:'#c4cad8', margin:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                        {trunc(message, 26)}
+                      </p>
+
+                      {/* Time ago */}
+                      <p style={{ fontSize:11, color:'#9ca3b8', margin:0 }}>
+                        {arrived}
+                      </p>
+                    </div>
+                  )
+                })
+              )}
+            </div>
+          </div>
         </div>
 
         {/* ── Follow Ups — Overdue / Due Today / Upcoming ── */}
-        <div style={{ ...cardStyle, padding:'20px' }}>
+        <div style={{ ...cardStyle, padding: isMobile ? '16px' : isTablet ? '18px' : '20px' }}>
           <h2 style={{ fontSize:19, fontWeight:700, color:'#fff', marginBottom:14 }}>Follow Ups</h2>
           <div style={{ display:'flex', flexDirection:'column', gap:9 }}>
 

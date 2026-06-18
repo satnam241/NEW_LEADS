@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import {
   Download,
@@ -65,9 +65,37 @@ const ChartTooltip = ({ active, payload, label }: any) => {
   );
 };
 
+// ─────────────────────────────────────────────────────────────────
+// Responsive helper — breakpoints for mobile / tablet / desktop(mac)
+// (mobile <640px, tablet 640–1023px, desktop/mac ≥1024px)
+// ✅ Same lightweight pattern used across the dashboard/leads/login pages.
+// ─────────────────────────────────────────────────────────────────
+function useViewport() {
+  const [width, setWidth] = useState(
+    typeof window !== 'undefined' ? window.innerWidth : 1280
+  );
+
+  useEffect(() => {
+    const onResize = () => setWidth(window.innerWidth);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+
+  return {
+    width,
+    isMobile:  width < 640,
+    isTablet:  width >= 640 && width < 1024,
+    isDesktop: width >= 1024,
+  };
+}
+
 export default function ReportsPage() {
   const today = format(new Date(), "yyyy-MM-dd");
   const [date, setDate] = useState(today);
+
+  // ✅ Responsive flags — drives layout-only tweaks below (grid stacking,
+  //    header wrap, paddings). No data/logic depends on this.
+  const { isMobile, isTablet, isDesktop } = useViewport();
 
   const { data: report } = useDailyReport(date);
   const { data: stats } = useStats();
@@ -162,17 +190,24 @@ export default function ReportsPage() {
 const leads =exportData?.data ??[]
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: isMobile ? 14 : isTablet ? 16 : 20 }}>
       {/* HEADER */}
+      {/* ✅ Outer header now wraps so the title block and the action row
+          can stack on mobile/tablet instead of overflowing. The action
+          row's "no wrap" stays true to the original intent on desktop/mac
+          (where there's room), but relaxes to wrap below that so
+          Export/Date/Download don't get clipped on a phone. */}
        <div className="page-header" style={{
   background: "#3C3C3C",
   border: "1px solid rgba(255,255,255,.08)",
   borderRadius: 16,
-  padding: "18px 22px",
+  padding: isMobile ? "16px 16px" : isTablet ? "17px 20px" : "18px 22px",
   display: "flex",
   justifyContent: "space-between",
   alignItems: "center",
   marginBottom: 14,
+  flexWrap: "wrap",
+  gap: 14,
   boxShadow: "0 10px 30px rgba(0,0,0,.18)",
 }}>
   <div>
@@ -185,14 +220,15 @@ const leads =exportData?.data ??[]
     </p>
   </div>
 
-  {/* ✅ Export + Date + Download — one line, right-aligned, no wrap */}
+  {/* ✅ Export + Date + Download — one line on desktop/mac; wraps on
+      mobile/tablet instead of overflowing */}
   <div
     style={{
       display: "flex",
       justifyContent: "flex-end",
       alignItems: "center",
       gap: 10,
-      flexWrap: "nowrap",
+      flexWrap: isDesktop ? "nowrap" : "wrap",
     }}
   >
     <ExportDropdown leads={leads} />
@@ -241,6 +277,8 @@ const leads =exportData?.data ??[]
 </div>
 
       {/* STAT CARDS */}
+      {/* (unchanged — repeat(auto-fit,minmax(155px,1fr)) already reflows
+          the column count on its own at any viewport width) */}
       <div
         style={{
           display: "grid",
@@ -295,11 +333,14 @@ const leads =exportData?.data ??[]
       </div>
 
       {/* NEGOTIATION + VISITOR */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, }}>
+      {/* ✅ Stacks to a single column on mobile — at 2 fixed columns these
+          cards (icon + label + value + badge) get squeezed too tight on
+          a phone. Tablet/desktop keep the original side-by-side layout. */}
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 12, }}>
         <div
           className="card"
           style={{
-            padding: "18px 20px",
+            padding: isMobile ? "16px 16px" : "18px 20px",
             display: "flex",
             alignItems: "center",
             gap: 16,
@@ -372,7 +413,7 @@ const leads =exportData?.data ??[]
         <div
           className="card"
           style={{
-            padding: "18px 20px",
+            padding: isMobile ? "16px 16px" : "18px 20px",
             display: "flex",
             alignItems: "center",
             gap: 16,
@@ -444,10 +485,14 @@ const leads =exportData?.data ??[]
       </div>
 
       {/* CHARTS */}
+      {/* ✅ Stacks to a single column on mobile so neither chart gets
+          squeezed into an unreadable sliver. Recharts' ResponsiveContainer
+          already handles the internal scaling at any width — this just
+          controls whether the two cards share a row or not. */}
       <div
-        style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr", gap: 14 }}
+        style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1.5fr 1fr", gap: 14 }}
       >
-        <div className="card" style={{ padding: 20,background:"#3C3C3C",borderRadius:16,
+        <div className="card" style={{ padding: isMobile ? 16 : 20,background:"#3C3C3C",borderRadius:16,
           border:"1px solid rgba(255,255,255,.08)",boxShadow:"0 10px 30px rgba(0,0,0,.18)"
 
  }}>
@@ -496,7 +541,7 @@ const leads =exportData?.data ??[]
           </ResponsiveContainer>
         </div>
 
-        <div className="card" style={{ padding: 20, background:"#3C3C3C",
+        <div className="card" style={{ padding: isMobile ? 16 : 20, background:"#3C3C3C",
               borderRadius:16,
               border:"1px solid rgba(255,255,255,.08)",
               boxShadow:"0 10px 30px rgba(0,0,0,.18)"}}>
@@ -565,8 +610,10 @@ const leads =exportData?.data ??[]
       </div>
 
       {/* STATUS + SOURCE */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-        <div className="card" style={{ padding: 18,background:"#3C3C3C",borderRadius:16,border:"1px solid rgba(255,255,255,.08)",boxShadow:"0 10px 30px rgba(0,0,0,.18)" }}>
+      {/* ✅ Stacks to a single column on mobile — same reasoning as the
+          Negotiation/Visitor row above. Tablet/desktop unchanged. */}
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 14 }}>
+        <div className="card" style={{ padding: isMobile ? 14 : 18,background:"#3C3C3C",borderRadius:16,border:"1px solid rgba(255,255,255,.08)",boxShadow:"0 10px 30px rgba(0,0,0,.18)" }}>
           <h3
             style={{
               fontSize: 14,
@@ -655,7 +702,7 @@ const leads =exportData?.data ??[]
           ))}
         </div>
 
-        <div className="card" style={{ padding: 18,background:"#3C3C3C",borderRadius:16,border:"1px solid rgba(255,255,255,.08)",boxShadow:"0 10px 30px rgba(0,0,0,.18)" }}>
+        <div className="card" style={{ padding: isMobile ? 14 : 18,background:"#3C3C3C",borderRadius:16,border:"1px solid rgba(255,255,255,.08)",boxShadow:"0 10px 30px rgba(0,0,0,.18)" }}>
           <h3
             style={{
               fontSize: 14,
@@ -724,7 +771,10 @@ color:"#ffffff"
       </div>
 
       {/* ACTIVITY METRICS */}
-      <div className="card" style={{ padding: 18,background:"#3C3C3C",borderRadius:16,border:"1px solid rgba(255,255,255,.08)",boxShadow:"0 10px 30px rgba(0,0,0,.18)"}}>
+      {/* (unchanged grid — repeat(auto-fit,minmax(180px,1fr)) already
+          reflows the column count on its own; only the card's own
+          padding scales down on mobile) */}
+      <div className="card" style={{ padding: isMobile ? 14 : 18,background:"#3C3C3C",borderRadius:16,border:"1px solid rgba(255,255,255,.08)",boxShadow:"0 10px 30px rgba(0,0,0,.18)"}}>
         <div
           style={{
             display: "flex",
@@ -792,8 +842,10 @@ color:"#ffffff"
       </div>
 
       {/* FOLLOW-UP LIST */}
+      {/* (unchanged — rows have no fixed widths/forced single-line
+          constraints, so they already adapt fine at any viewport width) */}
       {followups.length > 0 && (
-        <div className="card" style={{ padding: 18,background:"#3C3C3C",borderRadius:16,border:"1px solid rgba(255,255,255,.08)",boxShadow:"0 10px 30px rgba(0,0,0,.18)" }}>
+        <div className="card" style={{ padding: isMobile ? 14 : 18,background:"#3C3C3C",borderRadius:16,border:"1px solid rgba(255,255,255,.08)",boxShadow:"0 10px 30px rgba(0,0,0,.18)" }}>
           <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 12 ,color: "#ffffff",}}>
             Follow-ups · {format(new Date(date + "T00:00:00"), "MMM d, yyyy")}
             <span

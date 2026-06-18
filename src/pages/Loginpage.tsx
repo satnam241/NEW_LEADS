@@ -1,9 +1,34 @@
 // src/pages/LoginPage.tsx
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Loader2, Eye, EyeOff, AlertCircle, ArrowRight } from 'lucide-react'
 import { adminLogin } from '@/lib/api'
 import '../styles/globals.css'
+
+// ─────────────────────────────────────────────────────────────────
+// Responsive helper — breakpoints for mobile / tablet / desktop(mac)
+// (mobile <640px, tablet 640–1023px, desktop/mac ≥1024px)
+// ✅ Same lightweight pattern used across the dashboard/leads pages.
+// ─────────────────────────────────────────────────────────────────
+function useViewport() {
+  const [width, setWidth] = useState(
+    typeof window !== 'undefined' ? window.innerWidth : 1280
+  )
+
+  useEffect(() => {
+    const onResize = () => setWidth(window.innerWidth)
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
+
+  return {
+    width,
+    isMobile:  width < 640,
+    isTablet:  width >= 640 && width < 1024,
+    isDesktop: width >= 1024,
+  }
+}
+
 export default function LoginPage() {
   const nav = useNavigate()
   const [form, setForm]         = useState({ email: '', password: '' })
@@ -11,6 +36,12 @@ export default function LoginPage() {
   const [remember, setRemember] = useState(false)
   const [loading, setLoading]   = useState(false)
   const [error, setError]       = useState('')
+
+  // ✅ Responsive flag — the split-screen brand panel (heading +
+  //    illustration) has no room on a phone, so it's hidden below
+  //    640px and the form simply takes the full screen. Tablet and
+  //    desktop/mac keep the original 50/50 split exactly as-is.
+  const { isMobile } = useViewport()
 
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm(f => ({ ...f, [k]: e.target.value }))
@@ -38,6 +69,10 @@ export default function LoginPage() {
     }}>
 
         {/* ── LEFT DARK PANEL ── */}
+        {/* ✅ Hidden on mobile (<640px) — at that width a 50/50 split
+            leaves no usable room for either the heading or the form.
+            Unchanged on tablet/desktop. */}
+        {!isMobile && (
 <div style={{
   flex: '0 0 50%',
   background: '#3a3b3f',
@@ -72,6 +107,7 @@ export default function LoginPage() {
     }}
   />
 </div>
+        )}
         {/* ── RIGHT WHITE PANEL ── */}
         <div style={{
           flex: 1,
@@ -79,7 +115,7 @@ export default function LoginPage() {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          padding: '44px 40px',
+          padding: isMobile ? '32px 20px' : '44px 40px',
         }}>
           <div style={{ width: '100%', maxWidth: 320 ,}}>
 

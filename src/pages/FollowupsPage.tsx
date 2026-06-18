@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { format, isToday, isPast, parseISO, isValid } from 'date-fns'
 import {
   CheckCircle2, Calendar, Edit2,
@@ -45,6 +45,31 @@ const TAB_CONFIG: Record<Tab, {
 }
 
 // ─────────────────────────────────────────────────────────────────
+// Responsive helper — breakpoints for mobile / tablet / desktop(mac)
+// (mobile <640px, tablet 640–1023px, desktop/mac ≥1024px)
+// ✅ Same lightweight pattern used on the Dashboard page — plain
+//    useState + resize listener, no extra deps.
+// ─────────────────────────────────────────────────────────────────
+function useViewport() {
+  const [width, setWidth] = useState(
+    typeof window !== 'undefined' ? window.innerWidth : 1280
+  )
+
+  useEffect(() => {
+    const onResize = () => setWidth(window.innerWidth)
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
+
+  return {
+    width,
+    isMobile:  width < 640,
+    isTablet:  width >= 640 && width < 1024,
+    isDesktop: width >= 1024,
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────────────────────────
 function safeParseDate(d?: string | null): Date | null {
@@ -61,6 +86,9 @@ function avatarColor(name: string) {
 
 // ─────────────────────────────────────────────────────────────────
 // Schedule Modal
+// ✅ Only addition: a little horizontal breathing room around the
+//    overlay (16px) so the dialog never touches the screen edges on
+//    narrow phones. The dialog itself (size/colors/fields) is untouched.
 // ─────────────────────────────────────────────────────────────────
 function ScheduleModal({
   lead, open, onClose, onSave, isSaving,
@@ -98,10 +126,10 @@ function ScheduleModal({
 
   return (
     <div
-      style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.6)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:9999 }}
+      style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.6)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:9999, padding:'16px', boxSizing:'border-box' }}
       onClick={e => { if (e.target === e.currentTarget) onClose() }}
     >
-      <div style={{ background:'#2a2d3e', borderRadius:16, width:'100%', maxWidth:420, boxShadow:'0 24px 60px rgba(0,0,0,0.4)', display:'flex', flexDirection:'column' }}>
+      <div style={{ background:'#2a2d3e', borderRadius:16, width:'100%', maxWidth:420, boxShadow:'0 24px 60px rgba(0,0,0,0.4)', display:'flex', flexDirection:'column', maxHeight:'90vh', overflowY:'auto' }}>
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'16px 20px', borderBottom:'1px solid rgba(255,255,255,0.08)' }}>
           <div>
             <p style={{ fontSize:14, fontWeight:700, color:'#fff' }}>📅 Schedule Follow-up</p>
@@ -172,6 +200,8 @@ function ScheduleModal({
 
 // ─────────────────────────────────────────────────────────────────
 // Lead Card
+// (unchanged — the auto-fill grid it sits in already handles column
+// count responsively across mobile/tablet/desktop on its own)
 // ─────────────────────────────────────────────────────────────────
 function LeadCard({
   lead, onEdit, onDone, onSchedule, isDoing,
@@ -298,6 +328,10 @@ export default function FollowupsPage() {
   const [sched,   setSched]     = useState<Lead | null>(null)
   const [search,  setSearch]    = useState('')
 
+  // ✅ Responsive flags — drives layout-only tweaks below (tab grid columns,
+  //    paddings, search width). No data/logic depends on this.
+  const { isMobile, isTablet, isDesktop } = useViewport()
+
   // ✅ KEY FIX: Sabhi 4 tabs ka data page load pe hi fetch karo simultaneously
   // Tab switch pe reload nahi hoga — data already ready hoga
   const { data: todayLeads    = [], isLoading: loadingToday    } = useFollowups('today')
@@ -364,10 +398,10 @@ export default function FollowupsPage() {
   const dateStr = `${now.getDate()}/${now.getMonth() + 1}/${String(now.getFullYear()).slice(2)}`
 
   return (
-    <div style={{ display:'flex', flexDirection:'column', gap:20 }}>
+    <div style={{ display:'flex', flexDirection:'column', gap: isMobile ? 14 : isTablet ? 16 : 20 }}>
 
       {/* Header */}
-      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:8 }}>
         <h1 style={{ fontSize:26, fontWeight:700, color:'#fff', margin:0 }}>Follow ups</h1>
         <span style={{ fontSize:13, color:'#9ca3b8' }}>
           Date: <strong style={{ color:'#fff' }}>{dateStr}</strong>
@@ -375,7 +409,13 @@ export default function FollowupsPage() {
       </div>
 
       {/* ── Tab Cards ── */}
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:14 }}>
+      {/* ✅ Collapses to 2 columns on phones so labels/counts don't get
+          squeezed; tablet & desktop/mac keep the original 4-column row. */}
+      <div style={{
+        display:'grid',
+        gridTemplateColumns: isMobile ? 'repeat(2,1fr)' : 'repeat(4,1fr)',
+        gap: isMobile ? 10 : isTablet ? 12 : 14,
+      }}>
         {(Object.keys(TAB_CONFIG) as Tab[]).map(key => {
           const cfg    = TAB_CONFIG[key]
           const active = tab === key
@@ -387,7 +427,7 @@ export default function FollowupsPage() {
               style={{
                 background: active ? cfg.activeBg : '#3C3C3C',
                 borderRadius: 13,
-                padding: '18px 20px',
+                padding: isMobile ? '14px 14px' : isTablet ? '16px 18px' : '18px 20px',
                 cursor: 'pointer',
                 border: active ? `2px solid ${cfg.activeBorder}` : '1px solid rgba(195,194,194,0.07)',
                 transition: 'all 0.18s',
@@ -410,11 +450,13 @@ export default function FollowupsPage() {
       </div>
 
       {/* Section title + Search */}
-      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+      {/* ✅ Wraps to its own line on mobile so the search bar gets full width
+          instead of squeezing next to the heading. */}
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:10 }}>
         <h2 style={{ fontSize:22, fontWeight:700, color:'#fff', margin:0 }}>
           {TAB_CONFIG[tab].label}
         </h2>
-        <div style={{ position:'relative', maxWidth:260 }}>
+        <div style={{ position:'relative', maxWidth: isMobile ? '100%' : 260, width: isMobile ? '100%' : 'auto' }}>
           <Search size={13} style={{ position:'absolute', left:10, top:'50%', transform:'translateY(-50%)', color:'#6b7280' }} />
           <input
             value={search}
@@ -425,7 +467,8 @@ export default function FollowupsPage() {
               paddingTop:0, paddingBottom:0,
               background:'#3C3C3C', border:'1px solid rgba(255,255,255,0.1)',
               borderRadius:50, color:'#9ca3b8', fontSize:13,
-              outline:'none', fontFamily:'inherit', width:240,
+              outline:'none', fontFamily:'inherit', width: isMobile ? '100%' : 240,
+              boxSizing:'border-box',
             }}
           />
           {search && (
@@ -440,6 +483,8 @@ export default function FollowupsPage() {
       </div>
 
       {/* Lead Cards Grid */}
+      {/* (unchanged — repeat(auto-fill,minmax(175px,1fr)) already reflows
+          the column count on its own at any viewport width) */}
       {isLoading ? (
         <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(175px,1fr))', gap:12 }}>
           {[...Array(5)].map((_,i) => (
