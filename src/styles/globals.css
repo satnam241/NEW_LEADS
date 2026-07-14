@@ -233,7 +233,21 @@ border:1px solid rgba(255,255,255,.08);
 background:#4c6ef5 !important;
 }
 }
+/* ── Tablet (768px – 1023px) ─────────────────── */
+@media (min-width: 768px) {
+  .desktop-sidebar { display: block !important; }
 
+  .menu-btn { display: none !important; }
+
+  .main-content {
+    padding: 20px 20px 20px 0;
+    margin-left: -282px;
+    width: calc(100% + 282px);
+    padding-left: 302px;
+  }
+
+  header { padding: 10px 20px !important; }
+}
 /* ─── KEYFRAMES ─────────────────────────────── */
 @keyframes backdropIn { from{opacity:0} to{opacity:1} }
 @keyframes modalIn    { from{opacity:0;transform:translateY(10px) scale(0.98)} to{opacity:1;transform:translateY(0) scale(1)} }

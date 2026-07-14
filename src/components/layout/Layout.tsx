@@ -402,17 +402,18 @@ function Navbar({ onMenuClick }: { onMenuClick: () => void }) {
       {/* Left — Menu + Admin Name */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, flex: 1 }}>
         {/* Hamburger — always visible, desktop pe bhi (sidebar toggle) */}
-        <button
-          onClick={onMenuClick}
-          style={{
-            background: 'none', border: 'none', cursor: 'pointer',
-            color: '#9ca3b8', display: 'flex', flexShrink: 0,
-            padding: 4, borderRadius: 6,
-          }}
-          aria-label="Open menu"
-        >
-          <Menu size={20} />
-        </button>
+     <button
+  className="menu-btn"
+  onClick={onMenuClick}
+  style={{
+    background: 'none', border: 'none', cursor: 'pointer',
+    color: '#9ca3b8', display: 'flex', flexShrink: 0,
+    padding: 4, borderRadius: 6,
+  }}
+  aria-label="Open menu"
+>
+  <Menu size={20} />
+</button>
 
         <span style={{
           fontSize: 'clamp(15px, 3vw, 21px)',
