@@ -113,7 +113,7 @@ export function mapLead(raw: any): Lead {
     source: raw.source ?? 'Manual',
     status: mapStatus(raw.status ?? 'new'),
 
-    note:    raw.message ?? null,
+    note:   raw.note ?? null,
     message: raw.message,
 
     assigned_to: null,

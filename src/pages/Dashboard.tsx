@@ -186,10 +186,13 @@ export default function DashboardHome() {
 
   const presentCount  = st.total
   const verifiedCount = st.byStatus['Contacted'] ?? st.byStatus['contacted'] ?? 0
-  const dismissCount  =
-    (st.byStatus['Lost']      ?? 0) +
-    (st.byStatus['lost']      ?? 0) +
-    (st.byStatus['Dismissed'] ?? 0)
+  // const dismissCount  =
+  //   (st.byStatus['Lost']      ?? 0) +
+  //   (st.byStatus['lost']      ?? 0) +
+  //   (st.byStatus['Dismissed'] ?? 0)
+  const closedCount = (st.byStatus['Closed'] ?? 0) + (st.byStatus['closed'] ?? 0)
+const lostCount    = (st.byStatus['Lost']   ?? 0) + (st.byStatus['lost']   ?? 0)
+
   const ringMax = Math.max(presentCount, 30)
 
   const growthNote =
@@ -304,10 +307,15 @@ export default function DashboardHome() {
               label={`Verified | ${MONTH_SHORT[selMonth-1]}`}
               sublabel="In conversation"
             />
-            <Ring value={dismissCount}  max={ringMax} color="#A8CCFF" size={ringSize} strokeWidth={ringStroke}
-              label={`Dismisss | ${MONTH_SHORT[selMonth-1]}`}
-              sublabel="Closed / Lost"
-            />
+           <Ring value={closedCount} max={ringMax} color="#A8CCFF" size={ringSize} strokeWidth={ringStroke}
+    label={`Closed | ${MONTH_SHORT[selMonth-1]}`}
+    sublabel="Deal won"
+  />
+  {/* ✅ Lost — alag ring, red color */}
+  <Ring value={lostCount} max={ringMax} color="#A8CCFF" size={ringSize} strokeWidth={ringStroke}
+    label={`Lost | ${MONTH_SHORT[selMonth-1]}`}
+    sublabel="Deal lost"
+  />
           </div>
         </div>
 
@@ -430,12 +438,16 @@ export default function DashboardHome() {
                     ?? (source.charAt(0).toUpperCase() + source.slice(1))
 
                   // ✅ Budget from extraFields
-                  const budget = fmtBudget(raw.extraFields?.what_is_your_budget_ ?? raw.message)
+                 // ✅ Budget — sahi field se, fallback ke sath (naye + purane dono type leads ke liye)
+                          const budget = fmtBudget(
+                                raw.whatIsYourBudget ??
+                         raw.extraFields?.what_is_your_budget_ ??
+                           raw.rawData?.extraFields?.what_is_your_budget_
+                         )
 
-                  // ✅ Message — CRM note first, else purchase-timeline as intent message
-                  const message = lead.note
-                    ?? fmtTimeline(raw.extraFields?.when_are_you_planning_to_purchase_)
-
+                                  // ✅ Message — sirf tab dikhao jab genuinely message ho, placeholder text na ho
+                                const rawMsg = raw.message && raw.message !== 'No message provided' ? raw.message : null
+                           const message = lead.note ?? rawMsg ?? '—'
                   // ✅ Time ago — "1m ago / 1h ago / 1d ago"
                   const arrived = timeAgo(raw.receivedAt ?? raw.createdAt ?? lead.created_at)
 
@@ -488,9 +500,13 @@ export default function DashboardHome() {
                       </p>
 
                       {/* Message */}
-                      <p style={{ fontSize:11, color:'#c4cad8', margin:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
-                        {trunc(message, 26)}
-                      </p>
+                     
+                      {raw.message && raw.message !== 'No message provided' && (
+                        <p style={{ fontSize:11, color:'#77a8ff', margin:'1px 0 0', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                        {trunc(raw.message, 26)}
+                        </p>
+                           )}
+                      
 
                       {/* Time ago */}
                       <p style={{ fontSize:11, color:'#9ca3b8', margin:0 }}>
