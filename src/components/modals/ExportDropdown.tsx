@@ -79,19 +79,27 @@ borderRadius:14 }}>
           </div>
 
           {/* Export options */}
-          <div style={{ padding: '4px 0' }}>
-            {EXPORT_OPTIONS.map(opt => (
-              <button
-                key={opt.key}
-                className="dropdown-item"
-                onClick={() => handleExport(opt.key as ExportFilter)}
-                disabled={loading}
-              >
-                {loading ? <Loader2 size={11} className="animate-spin" /> : null}
-                {opt.label}
-              </button>
-            ))}
-          </div>
+         {/* Export options */}
+<div style={{ padding: '4px 0' }}>
+  {EXPORT_OPTIONS.map(opt => (
+    <button
+      key={opt.key}
+      className="dropdown-item"
+      onClick={() => handleExport(opt.key as ExportFilter)}
+      disabled={loading}
+      style={{
+        color: '#ffffff',
+        display: 'flex', alignItems: 'center', gap: 6,
+        width: '100%', textAlign: 'left',
+        padding: '8px 12px', fontSize: 13,
+        background: 'transparent', border: 'none', cursor: 'pointer',
+      }}
+    >
+      {loading ? <Loader2 size={11} className="animate-spin" /> : null}
+      {opt.label}
+    </button>
+  ))}
+</div>
 
         </div>
       )}

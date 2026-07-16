@@ -66,6 +66,9 @@ const LeadsPage    = React.lazy(() => import('./pages/LeadsPage'))
 const FollowupsPage = React.lazy(() => import('./pages/FollowupsPage'))
 const PipelinePage = React.lazy(() => import('./pages/PipelinePage'))
 const ReportsPage  = React.lazy(() => import('./pages/ReportsPage'))
+const ForgotPasswordPage  = React.lazy(() => import('./pages/ForgotPasswordPage'))
+const ResetPasswordPage  = React.lazy(() => import('./pages/ResetPasswordPage'))
+ForgotPasswordPage
 
 // ── Preload all pages immediately on app start ────────────────────────────
 function preloadAll() {
@@ -74,6 +77,8 @@ function preloadAll() {
   import('./pages/FollowupsPage')
   import('./pages/PipelinePage')
   import('./pages/ReportsPage')
+  import('./pages/ForgotPasswordPage')
+  import('./pages/ResetPasswordPage')
 }
 
 function ProtectedRoute({ children }: { children: JSX.Element }) {
@@ -131,6 +136,8 @@ function AppRoutes() {
     <Suspense fallback={<PageLoader />}>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
         <Route
           path="/"
           element={
@@ -145,8 +152,9 @@ function AppRoutes() {
           <Route path="followups"  element={<FollowupsPage />} />
           <Route path="pipeline"   element={<PipelinePage />} />
           <Route path="reports"    element={<ReportsPage />} />
+          
         </Route>
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
       </Routes>
     </Suspense>
   )

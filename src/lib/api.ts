@@ -785,4 +785,43 @@ export async function scheduleFollowUp(
     const err = await res.json().catch(() => ({}))
     throw new Error(err.message ?? `Follow-up scheduling failed (${res.status})`)
   }
+  
+}
+export async function downloadMonthlyReport(month: number, year: number) {
+  const token = localStorage.getItem('token') ?? ''
+  const res = await fetch(`${API_BASE}/admin/leads/monthly-report?month=${month}&year=${year}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  if (!res.ok) throw new Error('Failed to download monthly report')
+
+  const blob = await res.blob()
+  const url  = window.URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href  = url
+  link.download = `monthly-report-${month}-${year}.xlsx`
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  window.URL.revokeObjectURL(url)
+}
+
+export async function forgotPasswordRequest(email: string): Promise<{ message: string }> {
+  const res = await fetch(`${API_BASE}/admin/forgot-password`, {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify({ email }),
+  })
+  return handleResponse(res)
+}
+
+export async function resetPasswordWithToken(
+  token: string,
+  newPassword: string
+): Promise<{ message: string }> {
+  const res = await fetch(`${API_BASE}/admin/reset-password-token`, {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify({ token, newPassword }),
+  })
+  return handleResponse(res)
 }

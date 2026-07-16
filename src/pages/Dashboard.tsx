@@ -1,8 +1,9 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
-import { Search, ChevronDown } from 'lucide-react'
+import { Search, ChevronDown,Download } from 'lucide-react'
 import {  useStats, useMonthlyReport, useLeads, useFollowups, useRealtime } from '@/hooks/useLeads'
 import { useNavigate } from 'react-router-dom'
 import type { Lead } from '@/types'
+import { downloadMonthlyReport } from '@/lib/api'
 
 const MONTH_FULL  = ['January','February','March','April','May','June','July','August','September','October','November','December']
 const MONTH_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
@@ -291,12 +292,25 @@ const lostCount    = (st.byStatus['Lost']   ?? 0) + (st.byStatus['lost']   ?? 0)
 
         {/* Analytics */}
         <div style={{ ...cardStyle, padding: isMobile ? '16px 14px' : isTablet ? '18px 20px' : '20px 26px' }}>
+         
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:20, flexWrap:'wrap', gap:8 }}>
             <h2 style={{ fontSize:19, fontWeight:700, color:'#fff', margin:0 }}>Analytics</h2>
-            <span style={{ fontSize:12.5, color:'#9ca3b8' }}>
+            {/* <span style={{ fontSize:12.5, color:'#9ca3b8' }}>
               Date: <strong style={{ color:'#fff' }}>{dateStr}</strong>
-            </span>
+            </span> */}
+            <button
+  onClick={() => downloadMonthlyReport(selMonth, selYear)}
+  style={{
+    display:'flex', alignItems:'center', gap:5,
+    padding:'6px 12px', borderRadius:8,
+    background:'#2a2a2a', border:'1px solid #2a2a2a',
+    color:'white', fontSize:12, fontWeight:600, cursor:'pointer',
+  }}
+>
+  <Download size={13} /> Download Report
+</button>
           </div>
+          
           <div style={{ display:'flex', justifyContent:'space-around', alignItems:'flex-start', flexWrap:'wrap', gap:12 }}>
             <Ring value={presentCount}  max={ringMax} color="#A8CCFF" size={ringSize} strokeWidth={ringStroke}
               label={`Present | ${MONTH_SHORT[selMonth-1]}`}

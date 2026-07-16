@@ -27,7 +27,7 @@ import {
 import { useDailyReport, useStats, useFollowups,useLeads} from "@/hooks/useLeads";
 import ExportDropdown from '@/components/modals/ExportDropdown'
 const STATUS_COLORS: Record<string, string> = {
-  New: "#3b82f6",
+  New: "#1277e3",
   Contacted: "#f59e0b",
   Negotiation: "#8b5cf6",
   Visitor: "#06b6d4",
