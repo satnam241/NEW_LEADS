@@ -1,17 +1,16 @@
 import { useState, useMemo, useEffect } from 'react'
 import { format, isToday, isPast, parseISO, isValid } from 'date-fns'
 import {
-  CheckCircle2, Calendar, Edit2,
+  CheckCircle2, Edit2,
   CalendarPlus, X, Search,
 } from 'lucide-react'
-import { useSearchParams, useNavigate } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
 import {
   useFollowups, useMarkFollowupDone, useUpdateLead, useScheduleFollowUp,
 } from '@/hooks/useLeads'
 import LeadModal from '@/components/modals/LeadModal'
 import type { Lead, LeadInsert, FollowUpPayload } from '@/types'
 
-// ─────────────────────────────────────────────────────────────────
 type Tab = 'today' | 'overdue' | 'upcoming' | 'all'
 
 const TAB_CONFIG: Record<Tab, {
@@ -44,12 +43,6 @@ const TAB_CONFIG: Record<Tab, {
   },
 }
 
-// ─────────────────────────────────────────────────────────────────
-// Responsive helper — breakpoints for mobile / tablet / desktop(mac)
-// (mobile <640px, tablet 640–1023px, desktop/mac ≥1024px)
-// ✅ Same lightweight pattern used on the Dashboard page — plain
-//    useState + resize listener, no extra deps.
-// ─────────────────────────────────────────────────────────────────
 function useViewport() {
   const [width, setWidth] = useState(
     typeof window !== 'undefined' ? window.innerWidth : 1280
@@ -69,12 +62,18 @@ function useViewport() {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────
-// Helpers
-// ─────────────────────────────────────────────────────────────────
 function safeParseDate(d?: string | null): Date | null {
   if (!d) return null
   try { const p = parseISO(d); return isValid(p) ? p : null } catch { return null }
+}
+
+// datetime-local input needs "yyyy-MM-ddTHH:mm"
+function toDateTimeLocal(value?: string | null): string {
+  if (!value) return ''
+  const d = new Date(value)
+  if (isNaN(d.getTime())) return ''
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
 function avatarColor(name: string) {
@@ -86,9 +85,9 @@ function avatarColor(name: string) {
 
 // ─────────────────────────────────────────────────────────────────
 // Schedule Modal
-// ✅ Only addition: a little horizontal breathing room around the
-//    overlay (16px) so the dialog never touches the screen edges on
-//    narrow phones. The dialog itself (size/colors/fields) is untouched.
+// ✅ FIX — WhatsApp checkbox hataya, date input ab datetime-local hai
+// taaki exact time capture ho aur overdue/due-today usi time ke
+// hisaab se calculate ho.
 // ─────────────────────────────────────────────────────────────────
 function ScheduleModal({
   lead, open, onClose, onSave, isSaving,
@@ -99,16 +98,14 @@ function ScheduleModal({
   const [date, setDate] = useState('')
   const [note, setNote] = useState('')
   const [rec,  setRec]  = useState<'once'|'tomorrow'|'3days'|'weekly'>('once')
-  const [wa,   setWa]   = useState(false)
   const [err,  setErr]  = useState('')
   const prevId = useState<string|null>(null)
 
   if (open && lead && (lead._id ?? lead.id) !== prevId[0]) {
     prevId[1](lead._id ?? lead.id)
-    setDate(lead.followup_date ?? '')
-    setNote(lead.followup_note ?? '')
+    setDate(toDateTimeLocal(lead.followUp?.date ?? lead.followup_date))
+    setNote(lead.followup_note ?? lead.followUp?.message ?? '')
     setRec((lead.followUp?.recurrence as any) ?? 'once')
-    setWa(lead.followUp?.whatsappOptIn ?? false)
     setErr('')
   }
 
@@ -116,7 +113,7 @@ function ScheduleModal({
 
   const submit = () => {
     if (rec === 'once' && !date) { setErr('Date select karo'); return }
-    onSave({ date: rec === 'once' ? date : undefined, message: note || undefined, recurrence: rec, whatsappOptIn: wa })
+    onSave({ date: rec === 'once' ? date : undefined, message: note || undefined, recurrence: rec, whatsappOptIn: false })
   }
 
   const RECS = [
@@ -159,12 +156,12 @@ function ScheduleModal({
 
           {rec === 'once' && (
             <div>
-              <label style={labelS}>Follow-up Date *</label>
+              <label style={labelS}>Follow-up Date &amp; Time *</label>
               <input
-                type="date" value={date}
+                type="datetime-local" value={date}
                 onChange={e => { setDate(e.target.value); setErr('') }}
-                min={new Date().toISOString().split('T')[0]}
-                style={{ width:'100%', height:38, borderRadius:8, border:`1px solid ${err ? '#ef4444' : 'rgba(255,255,255,0.12)'}`, padding:'0 12px', fontSize:13, outline:'none', boxSizing:'border-box', background:'#1e2130', color:'#fff' }}
+                min={toDateTimeLocal(new Date().toISOString())}
+                style={{ width:'100%', height:38, borderRadius:8, border:`1px solid ${err ? '#ef4444' : 'rgba(255,255,255,0.12)'}`, padding:'0 12px', fontSize:13, outline:'none', boxSizing:'border-box', background:'#1e2130', color:'#fff', colorScheme:'dark' }}
               />
               {err && <p style={{ fontSize:11, color:'#ef4444', marginTop:4 }}>{err}</p>}
             </div>
@@ -177,11 +174,6 @@ function ScheduleModal({
               style={{ width:'100%', height:38, borderRadius:8, border:'1px solid rgba(255,255,255,0.12)', padding:'0 12px', fontSize:13, outline:'none', boxSizing:'border-box', background:'#1e2130', color:'#fff' }}
             />
           </div>
-
-          <label style={{ display:'flex', alignItems:'center', gap:8, cursor:'pointer', fontSize:13, color:'#9ca3b8', fontWeight:500 }}>
-            <input type="checkbox" checked={wa} onChange={e => setWa(e.target.checked)} style={{ width:15, height:15, accentColor:'#25d366' }} />
-            💬 WhatsApp reminder
-          </label>
         </div>
 
         <div style={{ display:'flex', justifyContent:'flex-end', gap:8, padding:'14px 20px', borderTop:'1px solid rgba(255,255,255,0.08)' }}>
@@ -200,8 +192,9 @@ function ScheduleModal({
 
 // ─────────────────────────────────────────────────────────────────
 // Lead Card
-// (unchanged — the auto-fill grid it sits in already handles column
-// count responsively across mobile/tablet/desktop on its own)
+// ✅ FIX — "VIEW DETAILS" ab isi page ki LeadModal ko open karta hai
+// (jisme us specific lead ka pura data dikhega), pehle /leads pe
+// navigate karta tha jo galat lead list dikhata tha.
 // ─────────────────────────────────────────────────────────────────
 function LeadCard({
   lead, onEdit, onDone, onSchedule, isDoing,
@@ -212,7 +205,6 @@ function LeadCard({
   onSchedule: (l: Lead) => void
   isDoing: boolean
 }) {
-  const navigate = useNavigate()
   const date     = safeParseDate(lead.followup_date)
   const isOv     = date ? isPast(date) && !isToday(date) : false
   const isTod    = date ? isToday(date) : false
@@ -255,7 +247,7 @@ function LeadCard({
         {date && (
           <p style={{ fontSize:10.5, color:'#fcfcfd', margin:0 }}>
             <span style={{ color: dateColor, fontWeight:600 }}>DATE:</span>{' '}
-            {format(date, 'dd-MM-yyyy')}
+            {format(date, 'dd-MM-yyyy, h:mm a')}
             {isOv  && <span style={{ marginLeft:4, fontSize:9.5, background:'rgba(239,68,68,0.15)', color:'#ef4444', padding:'1px 6px', borderRadius:4 }}>Overdue</span>}
             {isTod && <span style={{ marginLeft:4, fontSize:9.5, background:'rgba(251,191,36,0.15)', color:'#fbbf24', padding:'1px 6px', borderRadius:4 }}>Today</span>}
           </p>
@@ -284,7 +276,7 @@ function LeadCard({
       {/* Action buttons */}
       <div style={{ display:'flex', gap:5, flexWrap:'wrap', marginTop:'auto' }}>
         <button
-          onClick={() => navigate('/leads')}
+          onClick={() => onEdit(lead)}
           style={{ flex:1, padding:'6px 0', background:'#4c6ef5', border:'none', color:'#ffffff', borderRadius:8, fontSize:11, fontWeight:700, cursor:'pointer' }}
         >
           VIEW DETAILS
@@ -328,12 +320,8 @@ export default function FollowupsPage() {
   const [sched,   setSched]     = useState<Lead | null>(null)
   const [search,  setSearch]    = useState('')
 
-  // ✅ Responsive flags — drives layout-only tweaks below (tab grid columns,
-  //    paddings, search width). No data/logic depends on this.
-  const { isMobile, isTablet, isDesktop } = useViewport()
+  const { isMobile, isTablet } = useViewport()
 
-  // ✅ KEY FIX: Sabhi 4 tabs ka data page load pe hi fetch karo simultaneously
-  // Tab switch pe reload nahi hoga — data already ready hoga
   const { data: todayLeads    = [], isLoading: loadingToday    } = useFollowups('today')
   const { data: overdueLeads  = [], isLoading: loadingOverdue  } = useFollowups('overdue')
   const { data: upcomingLeads = [], isLoading: loadingUpcoming } = useFollowups('upcoming')
@@ -343,7 +331,6 @@ export default function FollowupsPage() {
   const updateM   = useUpdateLead()
   const scheduleM = useScheduleFollowUp()
 
-  // ✅ Active tab ke leads select karo
   const activeLeads: Lead[] = {
     today:    todayLeads,
     overdue:  overdueLeads,
@@ -358,7 +345,6 @@ export default function FollowupsPage() {
     all:      loadingAll,
   }[tab]
 
-  // ✅ Search filter active tab ke leads pe
   const leads = useMemo(() => {
     const q = search.trim().toLowerCase()
     if (!q) return activeLeads
@@ -370,7 +356,6 @@ export default function FollowupsPage() {
     )
   }, [activeLeads, search])
 
-  // ✅ Counts — har tab ka apna real count, page load pe hi ready
   const TAB_COUNTS: Record<Tab, number> = {
     today:    todayLeads.length,
     overdue:  overdueLeads.length,
@@ -408,9 +393,7 @@ export default function FollowupsPage() {
         </span>
       </div>
 
-      {/* ── Tab Cards ── */}
-      {/* ✅ Collapses to 2 columns on phones so labels/counts don't get
-          squeezed; tablet & desktop/mac keep the original 4-column row. */}
+      {/* Tab Cards */}
       <div style={{
         display:'grid',
         gridTemplateColumns: isMobile ? 'repeat(2,1fr)' : 'repeat(4,1fr)',
@@ -450,8 +433,6 @@ export default function FollowupsPage() {
       </div>
 
       {/* Section title + Search */}
-      {/* ✅ Wraps to its own line on mobile so the search bar gets full width
-          instead of squeezing next to the heading. */}
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:10 }}>
         <h2 style={{ fontSize:22, fontWeight:700, color:'#fff', margin:0 }}>
           {TAB_CONFIG[tab].label}
@@ -483,8 +464,6 @@ export default function FollowupsPage() {
       </div>
 
       {/* Lead Cards Grid */}
-      {/* (unchanged — repeat(auto-fill,minmax(175px,1fr)) already reflows
-          the column count on its own at any viewport width) */}
       {isLoading ? (
         <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(175px,1fr))', gap:12 }}>
           {[...Array(5)].map((_,i) => (

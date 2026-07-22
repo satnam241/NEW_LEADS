@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react'
-import { X, Loader2, CalendarClock, RefreshCw, MessageCircle, ExternalLink } from 'lucide-react'
+import { X, Loader2, CalendarClock, RefreshCw, ExternalLink } from 'lucide-react'
 import type { Lead, FollowUpRecurrence } from '@/types'
 
 interface Props {
@@ -24,19 +24,17 @@ const RECURRENCE_OPTIONS: { value: FollowUpRecurrence; label: string }[] = [
 ]
 
 interface Form {
-  followup_date:          string
-  followup_note:          string
-  followup_recurrence:    FollowUpRecurrence
-  followup_whatsappOptIn: boolean
-  followup_done:          boolean
+  followup_date:       string
+  followup_note:       string
+  followup_recurrence: FollowUpRecurrence
+  followup_done:       boolean
 }
 
 const EMPTY: Form = {
-  followup_date:          '',
-  followup_note:          '',
-  followup_recurrence:    'once',
-  followup_whatsappOptIn: false,
-  followup_done:          false,
+  followup_date:       '',
+  followup_note:       '',
+  followup_recurrence: 'once',
+  followup_done:       false,
 }
 
 function validate(f: Form) {
@@ -47,6 +45,15 @@ function validate(f: Form) {
   return e
 }
 
+// datetime-local input needs "yyyy-MM-ddTHH:mm" — safely convert any date source
+function toDateTimeLocal(value?: string | null): string {
+  if (!value) return ''
+  const d = new Date(value)
+  if (isNaN(d.getTime())) return ''
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
 export default function FollowUpModal({ lead, open, onClose, onSave, isSaving }: Props) {
   const [form,   setForm]   = useState<Form>(EMPTY)
   const [errors, setErrors] = useState<Partial<Record<keyof Form, string>>>({})
@@ -55,11 +62,13 @@ export default function FollowUpModal({ lead, open, onClose, onSave, isSaving }:
   useEffect(() => {
     if (!open || !lead) return
     setForm({
-      followup_date:          lead.followup_date ?? lead.followUp?.date ?? '',
-      followup_note:          lead.followup_note ?? lead.followUp?.message ?? '',
-      followup_recurrence:    (lead.followUp?.recurrence as FollowUpRecurrence) ?? 'once',
-      followup_whatsappOptIn: lead.followUp?.whatsappOptIn ?? false,
-      followup_done:          lead.followup_done ?? false,
+      // ✅ FIX — pehle ye line syntactically broken thi. Ab lead.followUp?.date
+      // (raw ISO datetime, jisme time hota hai) ko priority di jaati hai,
+      // aur datetime-local input ke liye sahi format mein convert kiya jaata hai.
+      followup_date:       toDateTimeLocal(lead.followUp?.date ?? lead.followup_date),
+      followup_note:       lead.followup_note ?? lead.followUp?.message ?? '',
+      followup_recurrence: (lead.followUp?.recurrence as FollowUpRecurrence) ?? 'once',
+      followup_done:       lead.followup_done ?? false,
     })
     setErrors({})
     setTimeout(() => firstRef.current?.focus(), 80)
@@ -75,10 +84,10 @@ export default function FollowUpModal({ lead, open, onClose, onSave, isSaving }:
     const errs = validate(form)
     if (Object.keys(errs).length) { setErrors(errs); return }
     onSave({
-      date:          form.followup_date       || undefined,
-      message:       form.followup_note       || undefined,
+      date:          form.followup_date || undefined,
+      message:       form.followup_note || undefined,
       recurrence:    form.followup_recurrence,
-      whatsappOptIn: form.followup_whatsappOptIn,
+      whatsappOptIn: false, // ✅ WhatsApp reminder UI se hataya gaya
       done:          form.followup_done,
     })
   }
@@ -95,7 +104,7 @@ export default function FollowUpModal({ lead, open, onClose, onSave, isSaving }:
           background: 'rgba(0,0,0,0.6)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           zIndex: 9999,
-          padding: '12px',          /* mobile pe safe gap */
+          padding: '12px',
         }}
         onClick={e => { if (e.target === e.currentTarget) onClose() }}
       >
@@ -174,7 +183,7 @@ export default function FollowUpModal({ lead, open, onClose, onSave, isSaving }:
                       color: form.followup_recurrence === r.value ? '#8bb4ff' : '#d1d5db',
                       display: 'flex', alignItems: 'center', gap: 5,
                       transition: 'all 120ms',
-                      flex: '1 1 auto',      /* mobile pe evenly fill karo */
+                      flex: '1 1 auto',
                       justifyContent: 'center',
                       minWidth: 70,
                     }}
@@ -186,16 +195,16 @@ export default function FollowUpModal({ lead, open, onClose, onSave, isSaving }:
               </div>
             </div>
 
-            {/* Date */}
+            {/* Date + Time */}
             {form.followup_recurrence === 'once' && (
               <div>
-                <label style={labelStyle}>Follow-up Date *</label>
+                <label style={labelStyle}>Follow-up Date &amp; Time *</label>
                 <input
                   ref={firstRef}
-                  type="date"
+                  type="datetime-local"
                   value={form.followup_date}
                   onChange={set('followup_date')}
-                  min={new Date().toISOString().split('T')[0]}
+                  min={toDateTimeLocal(new Date().toISOString())}
                   style={{
                     width: '100%', height: 40, borderRadius: 8,
                     border: `1px solid ${errors.followup_date ? '#ef4444' : 'rgba(255,255,255,.08)'}`,
@@ -226,21 +235,6 @@ export default function FollowUpModal({ lead, open, onClose, onSave, isSaving }:
                 }}
               />
             </div>
-
-            {/* WhatsApp opt-in */}
-            <label style={{
-              display: 'flex', alignItems: 'center', gap: 8,
-              cursor: 'pointer', fontSize: 13, fontWeight: 500, color: '#cbd5e1',
-            }}>
-              <input
-                type="checkbox"
-                checked={form.followup_whatsappOptIn}
-                onChange={set('followup_whatsappOptIn')}
-                style={{ width: 15, height: 15, accentColor: '#25d366', flexShrink: 0 }}
-              />
-              <MessageCircle size={14} style={{ color: '#25d366', flexShrink: 0 }} />
-              WhatsApp reminder
-            </label>
 
             {/* Mark done */}
             {isEditing && (
@@ -275,8 +269,9 @@ export default function FollowUpModal({ lead, open, onClose, onSave, isSaving }:
                 </p>
                 <p style={{ margin: 0 }}>
                   📅{' '}
-                  {new Date(lead.followUp.date).toLocaleDateString('en-IN', {
+                  {new Date(lead.followUp.date).toLocaleString('en-IN', {
                     day: 'numeric', month: 'short', year: 'numeric',
+                    hour: '2-digit', minute: '2-digit',
                   })}
                 </p>
                 {lead.followUp.recurrence && lead.followUp.recurrence !== 'once' && (

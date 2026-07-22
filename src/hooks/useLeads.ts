@@ -213,13 +213,24 @@ export function useScheduleFollowUp() {
   return useMutation({
     mutationFn: ({ id, payload }: { id: string; payload: FollowUpPayload }) =>
       api.scheduleFollowUp(id, payload),
-    onSuccess: () => {
-      // Invalidate all followup filter tabs
+  
+  onSuccess: (_, { id, payload }) => {
       qc.invalidateQueries({ queryKey: [FOLLOWUPS] })
-      // Also refresh leads list (followup_date column), stats (todayFollowups/overdueFollowups), pipeline cards
       qc.invalidateQueries({ queryKey: [LEADS] })
       qc.invalidateQueries({ queryKey: [STATS] })
       qc.invalidateQueries({ queryKey: [PIPELINE] })
+    // note field turant local cache mein bhi reflect karo, refetch ka wait na karna pade
+     if (payload.message) {
+       qc.setQueriesData<{ data: Lead[]; count: number }>({ queryKey: [LEADS] }, (old) => {
+         if (!old) return old
+         return {
+       ...old,
+          data: old.data.map(l =>
+             (l._id ?? l.id) === id ? { ...l, note: payload.message! } : l
+           ),
+         }
+       })
+     }
       toast.success('Follow-up scheduled!')
     },
     onError: (e: Error) => toast.error(e.message),

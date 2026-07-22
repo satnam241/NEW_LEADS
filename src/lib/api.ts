@@ -1,4 +1,3 @@
-
 import type {
   Lead,
   LeadInsert,
@@ -13,8 +12,8 @@ import type {
   SendMessagePayload,
   DailyReport,
   ReminderLead,
+  OverdueLead,
 } from '@/types'
-import { isToday, isPast, parseISO, format } from 'date-fns'
 
 // ─── Base URL ────────────────────────────────────────────────────────────────
 export const API_BASE = (import.meta.env.VITE_API_URL1 || '').replace(/\/+$/, '')
@@ -32,7 +31,6 @@ function authHeaders(): Record<string, string> {
 }
 
 async function handleResponse<T>(res: Response): Promise<T> {
-  // 401 → token expired/invalid → logout
   if (res.status === 401) {
     localStorage.removeItem('token')
     window.location.href = '/login'
@@ -50,17 +48,16 @@ function mapStatus(s: string): Lead['status'] {
     new:         'New',
     contacted:   'Contacted',
     interested:  'Interested',
-    negotiation: 'Negotiation', // 🆕
-    visitor:     'Visitor',     // 🆕
+    negotiation: 'Negotiation',
+    visitor:     'Visitor',
     converted:   'Closed',
     closed:      'Closed',
     lost:        'Lost',
-    // PascalCase (already correct)
     New:         'New',
     Contacted:   'Contacted',
     Interested:  'Interested',
-    Negotiation: 'Negotiation', // 🆕
-    Visitor:     'Visitor',     // 🆕
+    Negotiation: 'Negotiation',
+    Visitor:     'Visitor',
     Closed:      'Closed',
     Lost:        'Lost',
   }
@@ -72,22 +69,26 @@ function unmapStatus(s: string): string {
     New:         'new',
     Contacted:   'contacted',
     Interested:  'interested',
-    Negotiation: 'negotiation', // 🆕
-    Visitor:     'visitor',     // 🆕
+    Negotiation: 'negotiation',
+    Visitor:     'visitor',
     Closed:      'closed',
     Lost:        'lost',
   }
   return map[s] ?? 'new'
 }
+
 export function mapLead(raw: any): Lead {
   const followUpRaw = raw.followUp
 
+  // ✅ FIX — pehle .split('T')[0] time hata deta tha, ab pura ISO datetime rakha
+  // jaata hai taaki UI mein time bhi sahi dikhe aur overdue/due-today calculation
+  // exact time ke hisaab se ho
   let followup_date: string | null = null
   if (followUpRaw?.date) {
     try {
       const d = new Date(followUpRaw.date)
       if (!isNaN(d.getTime())) {
-        followup_date = d.toISOString().split('T')[0]
+        followup_date = d.toISOString()
       }
     } catch {
       followup_date = null
@@ -153,7 +154,6 @@ export async function adminLogin(creds: AuthCredentials): Promise<AuthResponse> 
   return data
 }
 
-/** POST /admin/signup  →  { success, message } */
 export async function adminSignup(
   payload: { name: string } & AuthCredentials
 ): Promise<AuthResponse> {
@@ -167,7 +167,6 @@ export async function adminSignup(
   return data
 }
 
-/** POST /admin/forgot-password */
 export async function forgotPassword(email: string): Promise<{ message: string }> {
   const res = await fetch(`${API_BASE}/admin/forgot-password`, {
     method:  'POST',
@@ -176,7 +175,6 @@ export async function forgotPassword(email: string): Promise<{ message: string }
   })
   return handleResponse(res)
 }
-
 
 export async function resetPassword(payload: {
   currentPassword: string
@@ -190,7 +188,6 @@ export async function resetPassword(payload: {
   return handleResponse(res)
 }
 
-
 export async function getAdminProfile(): Promise<{
   _id: string
   name: string
@@ -203,7 +200,6 @@ export async function getAdminProfile(): Promise<{
 export function adminLogout(): void {
   localStorage.removeItem('token')
 }
-
 
 const PAGE_SIZE = 20
 
@@ -235,10 +231,9 @@ export async function createLead(lead: LeadInsert): Promise<Lead> {
   if (!res.ok) throw new Error('Failed to create lead')
 
   const data = await res.json()
- 
+
   return mapLead(data.data ?? data.lead ?? data)
 }
-
 
 export async function updateLead(id: string, updates: LeadUpdate): Promise<Lead> {
   const body: any = {}
@@ -248,8 +243,7 @@ export async function updateLead(id: string, updates: LeadUpdate): Promise<Lead>
   if (updates.source !== undefined) body.source   = updates.source
   if (updates.status !== undefined) body.status   = unmapStatus(updates.status as Lead['status'])
   if (updates.note   !== undefined) body.message  = updates.note
- 
- 
+
   const res = await fetch(`${API_BASE}/leads/leads/${id}`, {
     method:  'PUT',
     headers: authHeaders(),
@@ -259,7 +253,6 @@ export async function updateLead(id: string, updates: LeadUpdate): Promise<Lead>
   const data = await res.json()
   return mapLead(data.lead ?? data.data ?? data)
 }
-
 
 export async function deleteLead(id: string): Promise<void> {
   const res = await fetch(`${API_BASE}/admin/leads/${id}`, {
@@ -286,7 +279,6 @@ export async function bulkDeleteLeads(ids: string[]): Promise<void> {
   if (!res.ok) throw new Error('Failed to bulk delete leads')
 }
 
-/** PATCH /leads/leads/bulk-restore */
 export async function bulkRestoreLeads(ids: string[]): Promise<void> {
   const res = await fetch(`${API_BASE}/leads/leads/bulk-restore`, {
     method:  'PATCH',
@@ -295,6 +287,7 @@ export async function bulkRestoreLeads(ids: string[]): Promise<void> {
   })
   if (!res.ok) throw new Error('Failed to bulk restore leads')
 }
+
 export async function fetchStats(): Promise<LeadStats> {
   try {
     const token = localStorage.getItem('token')
@@ -317,7 +310,6 @@ export async function fetchStats(): Promise<LeadStats> {
 
     const totalLeads = raw.totalLeads ?? 0
 
-    // ✅ Pehle old fields se fallback byStatus banao
     let byStatus: Record<string, number> = {
       New:       raw.newLeadsCount  ?? 0,
       Contacted: raw.contactedCount ?? 0,
@@ -325,7 +317,6 @@ export async function fetchStats(): Promise<LeadStats> {
       Lost:      raw.lostCount      ?? 0,
     }
 
-    // ✅ /admin/stats/summary se Negotiation + Visitor bhi lo
     try {
       const summaryRes = await fetch(`${API_BASE}/admin/stats/summary`, { headers })
       if (summaryRes.ok) {
@@ -371,6 +362,7 @@ export async function fetchStats(): Promise<LeadStats> {
     return { total: 0, byStatus: {}, bySource: {}, thisMonth: 0, todayFollowups: 0, overdueFollowups: 0 }
   }
 }
+
 export async function fetchFollowups(
   filter: 'today' | 'overdue' | 'upcoming' | 'all'
 ): Promise<Lead[]> {
@@ -387,17 +379,23 @@ export async function fetchFollowups(
   if (!res.ok) throw new Error('Failed to fetch followups')
 
   const raw = await res.json()
-  // Shape: { success: true, data: [...] }
   const list: any[] = raw.data ?? raw ?? []
   return list.map(mapLead)
 }
 
+// ✅ FIX — pehle DELETE /follow-up (cancelFollowUp) hit ho raha tha, jo follow-up
+// ko cancel/clear karta hai, resolve nahi. Ab PATCH /resolve (resolveFollowUp) hit
+// hoga — jo active:false + overdueStatus:"resolved" set karta hai aur FollowUpLog banata hai.
 export async function markFollowupDone(id: string): Promise<void> {
-  const res = await fetch(`${API_BASE}/followup/leads/${id}/follow-up`, {
-    method:  'DELETE',
+  const res = await fetch(`${API_BASE}/followup/leads/${id}/resolve`, {
+    method:  'PATCH',
     headers: authHeaders(),
+    body:    JSON.stringify({}),
   })
-  if (!res.ok) throw new Error('Failed to cancel follow-up')
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.message ?? err.error ?? `Failed to mark follow-up done (${res.status})`)
+  }
 }
 
 export async function acknowledgeFollowUp(id: string): Promise<void> {
@@ -410,7 +408,7 @@ export async function acknowledgeFollowUp(id: string): Promise<void> {
     throw new Error(err.message ?? `Acknowledge failed (${res.status})`)
   }
 }
- 
+
 /** PATCH /followup/leads/:id/resolve — done, log bhi banega */
 export async function resolveFollowUp(
   id: string,
@@ -426,11 +424,11 @@ export async function resolveFollowUp(
     throw new Error(err.message ?? `Resolve failed (${res.status})`)
   }
 }
- 
+
 /** PATCH /followup/leads/:id/reschedule — kal ke liye */
 export async function rescheduleFollowUp(
   id: string,
-  newDate?: string          // ISO string, optional — default kal 10 baje
+  newDate?: string
 ): Promise<void> {
   const res = await fetch(`${API_BASE}/followup/leads/${id}/reschedule`, {
     method:  'PATCH',
@@ -442,6 +440,7 @@ export async function rescheduleFollowUp(
     throw new Error(err.message ?? `Reschedule failed (${res.status})`)
   }
 }
+
 export async function fetchOverdueFollowUps(): Promise<OverdueLead[]> {
   const res = await fetch(`${API_BASE}/followup/overdue`, {
     headers: authHeaders(),
@@ -450,7 +449,7 @@ export async function fetchOverdueFollowUps(): Promise<OverdueLead[]> {
   const data = await res.json()
   return data.data ?? []
 }
- 
+
 /** GET /followup/stats — overdue/upcoming/resolved counts */
 export async function fetchFollowUpStats(): Promise<{
   overdue: number
@@ -464,7 +463,6 @@ export async function fetchFollowUpStats(): Promise<{
   const data = await res.json()
   return data.data ?? { overdue: 0, upcoming: 0, resolved: 0 }
 }
- 
 
 export async function fetchActivities(
   userId: string,
@@ -481,7 +479,6 @@ export async function fetchActivities(
   return res.json()
 }
 
-/** POST /activities  →  { userId, adminId?, text } */
 export async function addActivity(payload: ActivityInsert): Promise<Activity> {
   const res = await fetch(`${API_BASE}/activities`, {
     method:  'POST',
@@ -492,7 +489,6 @@ export async function addActivity(payload: ActivityInsert): Promise<Activity> {
   return res.json()
 }
 
-/** PUT /activities/:id  →  { text } */
 export async function updateActivity(id: string, text: string): Promise<Activity> {
   const res = await fetch(`${API_BASE}/activities/${id}`, {
     method:  'PUT',
@@ -503,7 +499,6 @@ export async function updateActivity(id: string, text: string): Promise<Activity
   return res.json()
 }
 
-/** DELETE /activities/:id */
 export async function deleteActivity(id: string): Promise<void> {
   const res = await fetch(`${API_BASE}/activities/${id}`, {
     method:  'DELETE',
@@ -511,6 +506,7 @@ export async function deleteActivity(id: string): Promise<void> {
   })
   if (!res.ok) throw new Error('Failed to delete activity')
 }
+
 export async function sendMessage(
   leadId: string,
   payload: SendMessagePayload
@@ -522,6 +518,7 @@ export async function sendMessage(
   })
   return handleResponse(res)
 }
+
 export async function fetchReminderLeads(): Promise<ReminderLead[]> {
   const res = await fetch(`${API_BASE}/admin/reminders`, { headers: authHeaders() })
   if (!res.ok) throw new Error('Failed to fetch reminders')
@@ -535,7 +532,7 @@ export async function fetchReminderCount(): Promise<number> {
   })
   if (!res.ok) return 0
   const data = await res.json()
-  
+
   return data.pendingReminders ?? data.count ?? 0
 }
 
@@ -547,10 +544,8 @@ export async function markAsContacted(id: string): Promise<void> {
   if (!res.ok) throw new Error('Failed to mark as contacted')
 }
 
-
 export async function fetchPipeline(): Promise<Lead[]> {
   try {
-    // Get total count first
     const firstRes = await fetch(`${API_BASE}/admin/leads?page=1&limit=10`, {
       headers: authHeaders(),
     })
@@ -565,7 +560,6 @@ export async function fetchPipeline(): Promise<Lead[]> {
       return leads.map(mapLead)
     }
 
-    // Fetch all remaining pages in parallel
     const pageNums = Array.from({ length: totalPages - 1 }, (_, i) => i + 2)
     const responses = await Promise.all(
       pageNums.map(p =>
@@ -582,7 +576,6 @@ export async function fetchPipeline(): Promise<Lead[]> {
 
     return allLeads.map(mapLead)
   } catch {
-    // Fallback to /leads/leads
     const res = await fetch(`${API_BASE}/leads/leads?page=1&limit=100`, {
       headers: authHeaders(),
     })
@@ -593,9 +586,7 @@ export async function fetchPipeline(): Promise<Lead[]> {
   }
 }
 
-
 export async function fetchDailyReport(date: string): Promise<DailyReport> {
-  // Collect all leads (paginated)
   const allLeads = await fetchPipeline()
 
   const dateLeads = allLeads.filter(
@@ -606,10 +597,9 @@ export async function fetchDailyReport(date: string): Promise<DailyReport> {
     date,
     newLeads:     dateLeads.filter(l => l.status === 'New'),
     updatedLeads: dateLeads.filter(l => l.status !== 'New'),
-    followups:    dateLeads.filter(l => l.followup_date === date),
+    followups:    dateLeads.filter(l => l.followup_date?.startsWith(date)),
   }
 }
-
 
 export async function importLeadsFile(
   file: File
@@ -619,7 +609,6 @@ export async function importLeadsFile(
 
   const res = await fetch(`${API_BASE}/admin/import-leads`, {
     method:  'POST',
-    // No Content-Type header – browser sets multipart boundary automatically
     headers: { Authorization: `Bearer ${getToken()}` },
     body:    formData,
   })
@@ -638,10 +627,7 @@ export async function importLeadsFile(
   }
 }
 
-
-
-// api.ts
-export async function downloadLeads(filter: ExportFilter, format: ExportFormat) {
+export async function downloadLeads(filter: string, format: string) {
   const token = localStorage.getItem('token') ?? ''
 
   const status = filter !== 'all'
@@ -673,7 +659,7 @@ export async function downloadLeads(filter: ExportFilter, format: ExportFormat) 
 
 export async function exportLeads(params: {
   format: 'xlsx' | 'csv'
-  status: string  // '' | 'new' | 'contacted' | 'closed' | 'lost'
+  status: string
 }) {
   const token = localStorage.getItem('token')
   if (!token) { window.location.href = '/login'; return }
@@ -698,18 +684,6 @@ export async function exportLeads(params: {
   URL.revokeObjectURL(url)
 }
 
-// ============================================================
-// api.ts — PATCH FILE
-// ============================================================
-// Drop these two functions into your existing src/lib/api.ts,
-// replacing the old fetchLeads and scheduleFollowUp.
-//
-// ✅ FIX #1  — fetchLeads: search + date filters now sent correctly
-// ✅ FIX #5  — scheduleFollowUp: uses POST /admin/leads/:id/follow-up
-// ============================================================
-
-import type { LeadFilters, FollowUpPayload } from '@/types'
-
 export async function fetchLeads(
   filters: LeadFilters,
   page: number
@@ -719,9 +693,8 @@ export async function fetchLeads(
   params.set('page',  String(page))
   params.set('limit', '20')
 
-  // Backend /admin/leads exactly ye params accept karta hai:
   if (filters.search?.trim())   params.set('search',   filters.search.trim())
-  if (filters.status?.trim())   params.set('status',   filters.status.trim().toLowerCase()) // backend lowercase mein store karta hai
+  if (filters.status?.trim())   params.set('status',   filters.status.trim().toLowerCase())
   if (filters.source?.trim())   params.set('source',   filters.source.trim())
   if (filters.dateFrom?.trim()) params.set('dateFrom', filters.dateFrom.trim())
   if (filters.dateTo?.trim())   params.set('dateTo',   filters.dateTo.trim())
@@ -743,7 +716,6 @@ export async function fetchLeads(
 
   const raw = await res.json()
 
-  // Backend response: { success, leads, totalLeads, page, totalPages }
   const list: any[]  = raw.leads ?? []
   const count: number = raw.totalLeads ?? list.length
 
@@ -753,40 +725,34 @@ export async function fetchLeads(
   }
 }
 
-// ════════════════════════════════════════════════════════════════════════════
-// ✅ FIX #5 — scheduleFollowUp
-// ════════════════════════════════════════════════════════════════════════════
-//
-// Correct endpoint: POST /admin/leads/:id/follow-up
-// Body shape expected by backend:
-//   { date, message?, recurrence?, whatsappOptIn? }
-//
-
+/**
+ * Correct endpoint: POST /followup/leads/:id/follow-up
+ * whatsappOptIn hardcoded false rakha gaya hai — UI se ye option hata diya gaya hai.
+ */
 export async function scheduleFollowUp(
   id: string,
   payload: FollowUpPayload
 ): Promise<void> {
   const body: Record<string, unknown> = {
     active: true,
+    whatsappOptIn: false,
   }
-  if (payload.date)          body.date          = payload.date
-  if (payload.message)       body.message       = payload.message
-  if (payload.recurrence)    body.recurrence    = payload.recurrence
-  if (payload.whatsappOptIn) body.whatsappOptIn = payload.whatsappOptIn
- 
-  // ✅ SAHI URL — /followup/leads/:id/follow-up
+  if (payload.date)       body.date       = payload.date
+  if (payload.message)    body.message    = payload.message
+  if (payload.recurrence) body.recurrence = payload.recurrence
+
   const res = await fetch(`${API_BASE}/followup/leads/${id}/follow-up`, {
     method:  'POST',
     headers: authHeaders(),
     body:    JSON.stringify(body),
   })
- 
+
   if (!res.ok) {
     const err = await res.json().catch(() => ({}))
     throw new Error(err.message ?? `Follow-up scheduling failed (${res.status})`)
   }
-  
 }
+
 export async function downloadMonthlyReport(month: number, year: number) {
   const token = localStorage.getItem('token') ?? ''
   const res = await fetch(`${API_BASE}/admin/leads/monthly-report?month=${month}&year=${year}`, {
