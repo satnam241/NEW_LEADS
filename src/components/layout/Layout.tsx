@@ -380,7 +380,7 @@ function Navbar({ onMenuClick }: { onMenuClick: () => void }) {
   }, [])
 
   const handleConnect = () => {
-    window.location.href = `${API_BASE.replace('/api', '')}/api/google/auth`
+    window.location.href = `${API_BASE}/google/auth`
   }
 
   const adminName    = admin?.name ?? 'Admin'
