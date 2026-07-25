@@ -37,7 +37,7 @@ export interface Lead {
   message?: string      // raw from backend
 
   assigned_to: string | null  // not in backend yet, kept for UI compatibility
-
+  assigned_by: string | null   
   // Follow-up (flattened for UI convenience)
   followup_date: string | null    // mapped from followUp.date
   followup_note: string | null    // mapped from followUp.message
@@ -49,6 +49,7 @@ export interface Lead {
   extraFields?: Record<string, any>
   rawData?: any
 
+  assignedTo?: string | null   // 🆕 raw backend field
   created_at: string    // mapped from createdAt
   updated_at: string    // mapped from updatedAt
   createdAt?: string    // raw from backend
@@ -66,6 +67,7 @@ export type LeadInsert = {
   status: LeadStatus
   note?: string | null
   assigned_to?: string | null
+  assigned_by?: string | null
   followup_date?: string | null
   followup_note?: string | null
   followup_done?: boolean
@@ -184,4 +186,8 @@ export interface OverdueLead {
     rescheduledAt?: string
     resolvedAt?: string
   }
+}
+export interface Assignee {
+  _id: string
+  name: string
 }

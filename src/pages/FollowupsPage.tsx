@@ -258,6 +258,11 @@ function LeadCard({
             {lead.source}
           </p>
         )}
+        {lead.assigned_to && (
+          <p style={{ fontSize:10.5, color:'#77a8ff', margin:0, fontWeight:600 }}>
+            👤 {lead.assigned_by ? `${lead.assigned_by} → ` : ''}{lead.assigned_to}
+          </p>
+        )}
 
         {(lead.followup_note || lead.note) && (
           <>

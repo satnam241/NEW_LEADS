@@ -161,7 +161,12 @@ function LeadsTable({ leads, isLoading, onEdit, onDelete, onFollowUp, onStatusCh
                           <Avatar name={displayName} size={22} />
                           <div>
                             <p style={{ fontWeight: 600, color: '#e2e8f0', fontSize: 13, margin: 0 }}>{displayName}</p>
-                            <p style={{ fontSize: 11, color: '#64748b', margin: 0 }}>{lead.email ?? lead.phone ?? '—'}</p>
+                            <p style={{ fontSize: 11, color: '#e5edf7', margin: 0 }}>{lead.email ?? lead.phone ?? '—'}</p>
+                           {lead.assigned_to && (
+                            <p style={{ fontSize: 12, color: '#fcfdff', margin: '2px 0 0', fontWeight: 600 }}>
+                             {lead.assigned_by ? `${lead.assigned_by} → ` : ''}{lead.assigned_to}
+                               </p>
+                               )}
                           </div>
                         </div>
                       </td>
@@ -206,7 +211,7 @@ function LeadsTable({ leads, isLoading, onEdit, onDelete, onFollowUp, onStatusCh
                       </td>
 
                       {/* Added */}
-                      <td className="tbody-cell hidden lg:table-cell" style={{ fontSize: 12, color: '#64748b', cursor: 'pointer' }} onClick={() => onEdit(lead)}>
+                      <td className="tbody-cell hidden lg:table-cell" style={{ fontSize: 12, color: '#dee9f9', cursor: 'pointer' }} onClick={() => onEdit(lead)}>
                         {lead.created_at ? format(new Date(lead.created_at), 'MMM d') : '—'}
                       </td>
 

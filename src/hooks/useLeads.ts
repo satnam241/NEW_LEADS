@@ -14,6 +14,7 @@ import type {
   SendMessagePayload,
 } from '@/types'
 import { fetchDashboardStats } from '@/lib/dashboardApi'
+import { fetchAssignees, createAssignee } from '@/lib/api'
 
 
 const LEADS      = 'leads'
@@ -385,5 +386,23 @@ export function useExportLeads() {
     mutationFn: api.exportLeads,
     onSuccess:  () => toast.success('Export started!'),
     onError:    (e: Error) => toast.error(e.message),
+  })
+}
+
+const ASSIGNEES = 'assignees'
+
+export function useAssignees() {
+  return useQuery({
+    queryKey: [ASSIGNEES],
+    queryFn: fetchAssignees,
+    staleTime: 30_000,
+  })
+}
+
+export function useCreateAssignee() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (name: string) => createAssignee(name),
+    onSuccess: () => qc.invalidateQueries({ queryKey: [ASSIGNEES] }),
   })
 }

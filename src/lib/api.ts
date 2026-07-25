@@ -80,9 +80,6 @@ function unmapStatus(s: string): string {
 export function mapLead(raw: any): Lead {
   const followUpRaw = raw.followUp
 
-  // ✅ FIX — pehle .split('T')[0] time hata deta tha, ab pura ISO datetime rakha
-  // jaata hai taaki UI mein time bhi sahi dikhe aur overdue/due-today calculation
-  // exact time ke hisaab se ho
   let followup_date: string | null = null
   if (followUpRaw?.date) {
     try {
@@ -117,7 +114,8 @@ export function mapLead(raw: any): Lead {
     note:   raw.note ?? null,
     message: raw.message,
 
-    assigned_to: null,
+    assigned_to: raw.assignedTo ?? null,   // pehle wala
+    assigned_by: raw.assignedBy ?? null, 
 
     followup_date,
     followup_note: followUpRaw?.message ?? null,
@@ -151,6 +149,7 @@ export async function adminLogin(creds: AuthCredentials): Promise<AuthResponse> 
   })
   const data = await handleResponse<any>(res)
   localStorage.setItem('token', data.token)
+  localStorage.setItem('adminName', data.admin?.name ?? '')   // 🆕
   return data
 }
 
@@ -199,8 +198,11 @@ export async function getAdminProfile(): Promise<{
 
 export function adminLogout(): void {
   localStorage.removeItem('token')
+  localStorage.removeItem('adminName')   // 🆕
 }
-
+export function getAdminName(): string {
+  return localStorage.getItem('adminName') ?? ''
+}
 const PAGE_SIZE = 20
 
 export async function createLead(lead: LeadInsert): Promise<Lead> {
@@ -211,6 +213,8 @@ export async function createLead(lead: LeadInsert): Promise<Lead> {
     source:   lead.source ?? 'Manual',
     status:   unmapStatus(lead.status),
     message:  lead.note   ?? null,
+    assignedTo: lead.assigned_to ?? null,   // 🆕 kisko assign kiya
+    assignedBy: lead.assigned_by ?? null,   // 🆕 kisne assign kiya
   }
 
   if (lead.followup_date) {
@@ -237,12 +241,14 @@ export async function createLead(lead: LeadInsert): Promise<Lead> {
 
 export async function updateLead(id: string, updates: LeadUpdate): Promise<Lead> {
   const body: any = {}
-  if (updates.name   !== undefined) body.fullName = updates.name
-  if (updates.email  !== undefined) body.email    = updates.email
-  if (updates.phone  !== undefined) body.phone    = updates.phone
-  if (updates.source !== undefined) body.source   = updates.source
-  if (updates.status !== undefined) body.status   = unmapStatus(updates.status as Lead['status'])
-  if (updates.note   !== undefined) body.message  = updates.note
+  if (updates.name        !== undefined) body.fullName   = updates.name
+  if (updates.email       !== undefined) body.email      = updates.email
+  if (updates.phone       !== undefined) body.phone      = updates.phone
+  if (updates.source      !== undefined) body.source     = updates.source
+  if (updates.status      !== undefined) body.status     = unmapStatus(updates.status as Lead['status'])
+  if (updates.note        !== undefined) body.message    = updates.note
+  if (updates.assigned_to !== undefined) body.assignedTo = updates.assigned_to   // 🆕
+  if (updates.assigned_by !== undefined) body.assignedBy = updates.assigned_by   // 🆕
 
   const res = await fetch(`${API_BASE}/leads/leads/${id}`, {
     method:  'PUT',
@@ -790,4 +796,25 @@ export async function resetPasswordWithToken(
     body:    JSON.stringify({ token, newPassword }),
   })
   return handleResponse(res)
+}
+
+
+export interface Assignee { _id: string; name: string }
+
+export async function fetchAssignees(): Promise<Assignee[]> {
+  const res = await fetch(`${API_BASE}/assignees`, { headers: authHeaders() })
+  if (!res.ok) return []
+  const data = await res.json()
+  return data.data ?? []
+}
+
+export async function createAssignee(name: string): Promise<Assignee> {
+  const res = await fetch(`${API_BASE}/assignees`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ name }),
+  })
+  if (!res.ok) throw new Error('Failed to save name')
+  const data = await res.json()
+  return data.data
 }

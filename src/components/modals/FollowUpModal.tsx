@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { X, Loader2, CalendarClock, RefreshCw, ExternalLink } from 'lucide-react'
 import type { Lead, FollowUpRecurrence } from '@/types'
-
+import CustomDateTimePicker from '@/components/CustomDateTimePicker'
 interface Props {
   lead: Lead | null
   open: boolean
@@ -40,7 +40,7 @@ const EMPTY: Form = {
 function validate(f: Form) {
   const e: Partial<Record<keyof Form, string>> = {}
   if (f.followup_recurrence === 'once' && !f.followup_date) {
-    e.followup_date = 'Date select karo ya recurrence choose karo'
+    e.followup_date = 'Select Date Or Recurrence'
   }
   return e
 }
@@ -199,20 +199,14 @@ export default function FollowUpModal({ lead, open, onClose, onSave, isSaving }:
             {form.followup_recurrence === 'once' && (
               <div>
                 <label style={labelStyle}>Follow-up Date &amp; Time *</label>
-                <input
-                  ref={firstRef}
-                  type="datetime-local"
+               <CustomDateTimePicker
                   value={form.followup_date}
-                  onChange={set('followup_date')}
-                  min={toDateTimeLocal(new Date().toISOString())}
-                  style={{
-                    width: '100%', height: 40, borderRadius: 8,
-                    border: `1px solid ${errors.followup_date ? '#ef4444' : 'rgba(255,255,255,.08)'}`,
-                    padding: '0 12px', fontSize: 13, outline: 'none',
-                    boxSizing: 'border-box',
-                    background: '#2a2a2a', color: '#fff',
-                    colorScheme: 'dark',
+                  onChange={val => {
+                    setForm(f => ({ ...f, followup_date: val }))
+                    if (errors.followup_date) setErrors(e => ({ ...e, followup_date: undefined }))
                   }}
+                  min={toDateTimeLocal(new Date().toISOString())}
+                  error={!!errors.followup_date}
                 />
                 {errors.followup_date && <p style={errStyle}>{errors.followup_date}</p>}
               </div>

@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { X, Loader2 } from 'lucide-react'
 import type { Lead, LeadInsert, LeadStatus, LeadSource } from '@/types'
+import AssigneeSelect from '@/components/AssigneeSelect'
 
 interface Props {
   lead?: Lead | null
@@ -22,12 +23,13 @@ interface Form {
   status: LeadStatus
   note: string
   assigned_to: string
+  assigned_by: string
 }
 
 const EMPTY: Form = {
   name: '', email: '', phone: '', whatsapp: '',
   source: 'Manual', status: 'New',
-  note: '', assigned_to: '',
+  note: '', assigned_to: '', assigned_by: '',
 }
 
 function validate(f: Form) {
@@ -64,6 +66,7 @@ export default function LeadModal({ lead, open, onClose, onSave, isSaving }: Pro
         status:      lead.status,
         note:        lead.note        ?? '',
         assigned_to: lead.assigned_to ?? '',
+        assigned_by: lead.assigned_by ?? '',
       })
     } else {
       setForm(EMPTY)
@@ -95,6 +98,7 @@ export default function LeadModal({ lead, open, onClose, onSave, isSaving }: Pro
       status:      form.status,
       note:        form.note        || null,
       assigned_to: form.assigned_to || null,
+      assigned_by: form.assigned_by || null,   // ✅ FIX — pehle yahan galti se form.assigned_to likha tha
     })
   }
 
@@ -233,6 +237,34 @@ export default function LeadModal({ lead, open, onClose, onSave, isSaving }: Pro
                 style={inputStyle}
               />
             </div>
+
+            {/* Assign to / Assign by */}
+            <div className="lead-grid-2">
+              <div>
+                <label style={labelStyle}>Assigned By</label>
+                <AssigneeSelect
+                  value={form.assigned_by}
+                  onChange={v => setForm(f => ({ ...f, assigned_by: v }))}
+                  fieldName="assignedBy"
+                />
+               
+              </div>
+              <div>
+                <label style={labelStyle}>Assigned To</label>
+                <AssigneeSelect
+                  value={form.assigned_to}
+                  onChange={v => setForm(f => ({ ...f, assigned_to: v }))}
+                  fieldName="assignedTo"
+                />
+              </div>
+            </div>
+
+            {lead?.assigned_to && lead?.assigned_by && (
+              <p style={{ fontSize: 12 , color: '#94a3b8', marginTop: -6 }}>
+                🕓 <strong style={{ color: '#cbd5e1' }}>{lead.assigned_by}</strong> assign to{' '}
+                <strong style={{ color: '#cbd5e1' }}>{lead.assigned_to}</strong> 
+              </p>
+            )}
 
           </div>
 
