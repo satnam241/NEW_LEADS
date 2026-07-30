@@ -114,27 +114,30 @@ function ClockFace({
 
       {/* Number labels around the clock */}
       {labels.map((label, i) => {
-        const a = i * 30 - 90
-        const r = (a * Math.PI) / 180
-        const lx = CENTER + RADIUS * Math.cos(r)
-        const ly = CENTER + RADIUS * Math.sin(r)
-        const isActive = current !== null && (mode === 'hour' ? current === label : current === label)
-        return (
-          <div
-            key={label}
-            style={{
-              position: 'absolute', top: ly - 12, left: lx - 12,
-              width: 24, height: 24, borderRadius: '50%',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 12, fontWeight: isActive ? 700 : 500,
-              color: isActive ? '#fff' : '#9ca3af',
-              zIndex: 2, pointerEvents: 'none',
-            }}
-          >
-            {mode === 'minute' ? pad(label) : label}
-          </div>
-        )
-      })}
+  const a = mode === 'hour'
+    ? (label % 12) * 30 - 90   // ✅ 12 -> top, 1 -> 30°, ... 11 -> 330°
+    : i * 30 - 90              // minute already correct as-is
+  const r = (a * Math.PI) / 180
+  const lx = CENTER + RADIUS * Math.cos(r)
+  const ly = CENTER + RADIUS * Math.sin(r)
+  const isActive = current !== null && current === label
+  return (
+    <div
+      key={label}
+      style={{
+        position: 'absolute', top: ly - 12, left: lx - 12,
+        width: 24, height: 24, borderRadius: '50%',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: 12, fontWeight: isActive ? 700 : 500,
+        color: isActive ? '#fff' : '#9ca3af',
+        zIndex: 2, pointerEvents: 'none',
+      }}
+    >
+      {mode === 'minute' ? pad(label) : label}
+    </div>
+  )
+})}
+     
     </div>
   )
 }
