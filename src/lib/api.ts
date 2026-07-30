@@ -212,7 +212,7 @@ export async function createLead(lead: LeadInsert): Promise<Lead> {
     phone:    lead.phone  ?? null,
     source:   lead.source ?? 'Manual',
     status:   unmapStatus(lead.status),
-    message:  lead.note   ?? null,
+    note:     lead.note   ?? null,
     assignedTo: lead.assigned_to ?? null,   // 🆕 kisko assign kiya
     assignedBy: lead.assigned_by ?? null,   // 🆕 kisne assign kiya
   }
@@ -246,9 +246,9 @@ export async function updateLead(id: string, updates: LeadUpdate): Promise<Lead>
   if (updates.phone       !== undefined) body.phone      = updates.phone
   if (updates.source      !== undefined) body.source     = updates.source
   if (updates.status      !== undefined) body.status     = unmapStatus(updates.status as Lead['status'])
-  if (updates.note        !== undefined) body.message    = updates.note
-  if (updates.assigned_to !== undefined) body.assignedTo = updates.assigned_to   // 🆕
-  if (updates.assigned_by !== undefined) body.assignedBy = updates.assigned_by   // 🆕
+  if (updates.note        !== undefined) body.note       = updates.note   // ✅ FIX — 'message' ki jagah 'note'
+  if (updates.assigned_to !== undefined) body.assignedTo = updates.assigned_to
+  if (updates.assigned_by !== undefined) body.assignedBy = updates.assigned_by
 
   const res = await fetch(`${API_BASE}/leads/leads/${id}`, {
     method:  'PUT',

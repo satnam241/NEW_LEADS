@@ -67,13 +67,12 @@ export default function LeadsPage() {
 
   const handleFilters = (f: LeadFilters) => { setFilters(f); setPage(1) }
 
-  const handleSave = async (d: LeadInsert) => {
-    if (editLead) await updateM.mutateAsync({ id: editLead._id ?? editLead.id, updates: d })
-    else          await createM.mutateAsync(d)
-    setModalOpen(false)
-    setEditLead(null)
-  }
-
+ const handleSave = async (d: LeadInsert) => {
+  if (editLead) await updateM.mutateAsync({ id: editLead._id ?? editLead.id, updates: d })
+  else          await createM.mutateAsync(d)
+  setModalOpen(false)
+  setEditLead(null)
+}
   const handleFollowUpSave = async (payload: {
     date?: string
     message?: string
