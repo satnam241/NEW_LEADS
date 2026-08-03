@@ -149,7 +149,7 @@ function NotificationPanel({
         {notifications.length === 0 ? (
           <div style={{ padding: '40px 20px', textAlign: 'center' }}>
             <p style={{ fontSize: 28, margin: '0 0 8px' }}>✅</p>
-            <p style={{ fontSize: 13, color: '#9ca3b8', margin: 0 }}>Sab clear! Koi pending follow-up nahi</p>
+            <p style={{ fontSize: 13, color: '#9ca3b8', margin: 0 }}>All Clear</p>
           </div>
         ) : (
           (Object.keys(grouped) as (keyof typeof grouped)[]).map(priority => {

@@ -76,9 +76,16 @@ function useViewport() {
   );
 
   useEffect(() => {
-    const onResize = () => setWidth(window.innerWidth);
+    let timeout: ReturnType<typeof setTimeout>;   // ✅ FIX — debounce
+    const onResize = () => {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => setWidth(window.innerWidth), 150);
+    };
     window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
+    return () => {
+      window.removeEventListener('resize', onResize);
+      clearTimeout(timeout);
+    };
   }, []);
 
   return {
@@ -532,7 +539,7 @@ const leads =exportData?.data ??[]
                 content={<ChartTooltip />}
                 cursor={{ fill: "rgba(255,255,255,.04)" }}
               />
-              <Bar dataKey="value" radius={[6, 6, 0, 0]}>
+              <Bar dataKey="value" radius={[6, 6, 0, 0]} isAnimationActive={false}>
                 {statusData.map((e, i) => (
                   <Cell key={i} fill={e.fill} />
                 ))}
@@ -558,7 +565,7 @@ const leads =exportData?.data ??[]
           </h3>
           <ResponsiveContainer width="100%" height={160}>
             <PieChart>
-              <Pie
+             <Pie
                 data={statusData.filter((d) => d.value > 0)}
                 cx="50%"
                 cy="50%"
@@ -566,6 +573,7 @@ const leads =exportData?.data ??[]
                 innerRadius={36}
                 dataKey="value"
                 paddingAngle={3}
+                isAnimationActive={false}
               >
                 {statusData
                   .filter((d) => d.value > 0)

@@ -316,12 +316,15 @@ export async function fetchStats(): Promise<LeadStats> {
 
     const totalLeads = raw.totalLeads ?? 0
 
-    let byStatus: Record<string, number> = {
-      New:       raw.newLeadsCount  ?? 0,
-      Contacted: raw.contactedCount ?? 0,
-      Closed:    raw.convertedCount ?? 0,
-      Lost:      raw.lostCount      ?? 0,
-    }
+   let byStatus: Record<string, number> = {
+  New:         raw.newLeadsCount   ?? 0,
+  Contacted:   raw.contactedCount  ?? 0,
+  Interested:  raw.interestedCount ?? 0,   
+  Negotiation: raw.negotiationCount ?? 0,  
+  Visitor:     raw.visitorCount     ?? 0,  
+  Closed:      raw.convertedCount  ?? 0,
+  Lost:        raw.lostCount       ?? 0,
+}
 
     try {
       const summaryRes = await fetch(`${API_BASE}/admin/stats/summary`, { headers })

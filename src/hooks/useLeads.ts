@@ -23,6 +23,7 @@ const FOLLOWUPS  = 'followups'
 const PIPELINE   = 'pipeline'
 const ACTIVITIES = 'activities'
 const REMINDERS  = 'reminders'
+const REPORT     = 'report'
 
 function useInvalidateAll() {
   const qc = useQueryClient()
@@ -32,6 +33,7 @@ function useInvalidateAll() {
     qc.invalidateQueries({ queryKey: [FOLLOWUPS] })
     qc.invalidateQueries({ queryKey: [PIPELINE] })
     qc.invalidateQueries({ queryKey: [REMINDERS] })
+    qc.invalidateQueries({ queryKey: [REPORT] })
   }
 }
 
@@ -220,6 +222,7 @@ export function useScheduleFollowUp() {
       qc.invalidateQueries({ queryKey: [LEADS] })
       qc.invalidateQueries({ queryKey: [STATS] })
       qc.invalidateQueries({ queryKey: [PIPELINE] })
+       qc.invalidateQueries({ queryKey: [REPORT] })
     // note field turant local cache mein bhi reflect karo, refetch ka wait na karna pade
      if (payload.message) {
        qc.setQueriesData<{ data: Lead[]; count: number }>({ queryKey: [LEADS] }, (old) => {
@@ -252,6 +255,7 @@ export function useMarkFollowupDone() {
       qc.invalidateQueries({ queryKey: [LEADS] })
       qc.invalidateQueries({ queryKey: [STATS] })
       qc.invalidateQueries({ queryKey: [PIPELINE] })
+      qc.invalidateQueries({ queryKey: [REPORT] }) 
       toast.success('Follow-up marked done!')
     },
     onError: (e: Error) => toast.error(e.message),
@@ -329,7 +333,7 @@ export function usePipeline() {
 
 export function useDailyReport(date: string) {
   return useQuery({
-    queryKey:  ['report', date],
+    queryKey:  [REPORT, date],   
     queryFn:   () => api.fetchDailyReport(date),
     staleTime: 60_000,
     enabled:   !!date,
