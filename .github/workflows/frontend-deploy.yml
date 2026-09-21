@@ -10,27 +10,95 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Deploy to VPS
+      - name: Deploy Frontend to VPS
         uses: appleboy/ssh-action@v1.2.0
 
         with:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.SSH_KEY }}
+          port: 22
 
           script: |
+            set -e
+
+            echo "======================================"
+            echo "🚀 Starting Frontend Deployment"
+            echo "======================================"
+
+            # Load NVM
+            export NVM_DIR="$HOME/.nvm"
+
+            if [ -s "$NVM_DIR/nvm.sh" ]; then
+              source "$NVM_DIR/nvm.sh"
+            else
+              echo "❌ NVM not found"
+              exit 1
+            fi
+
+            nvm use 20
+
+            echo "Node version:"
+            node -v
+
+            echo "NPM version:"
+            npm -v
+
+            # Frontend project
             cd /var/www/leads/leads
 
-            git pull origin main
+            echo "======================================"
+            echo "📦 Updating Git Repository"
+            echo "======================================"
+
+            git fetch origin main
+            git reset --hard origin/main
+
+            echo "Current commit:"
+            git log -1 --oneline
+
+            echo "======================================"
+            echo "📦 Installing Dependencies"
+            echo "======================================"
 
             npm ci
 
+            echo "======================================"
+            echo "🔨 Building Frontend"
+            echo "======================================"
+
             npm run build
 
+            echo "======================================"
+            echo "📂 Publishing Build"
+            echo "======================================"
+
             rm -rf /var/www/leads/build/*
+            cp -r dist/. /var/www/leads/build/
 
-            cp -r dist/* /var/www/leads/build/
+            echo "Build published successfully"
 
-            sudo nginx -t
+            echo "======================================"
+            echo "🌐 Testing Nginx"
+            echo "======================================"
 
-            sudo systemctl reload nginx
+            nginx -t
+
+            echo "======================================"
+            echo "♻️ Reloading Nginx"
+            echo "======================================"
+
+            systemctl reload nginx
+
+            echo "======================================"
+            echo "🔍 Checking Deployed Files"
+            echo "======================================"
+
+            test -f /var/www/leads/build/index.html
+
+            echo "✅ index.html exists"
+
+            echo ""
+            echo "======================================"
+            echo "🎉 Frontend Deployment Successful"
+            echo "======================================"
