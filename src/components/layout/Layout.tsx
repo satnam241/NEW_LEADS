@@ -2,7 +2,7 @@
 import {
   LayoutDashboard, FileText, Bell, BarChart2,
   LogOut, X, Menu, CalendarCheck, CalendarPlus,
-  AlertCircle, Clock, Calendar, ChevronRight,MessageSquare,LayoutTemplate,Flame,Send,Kanban
+  AlertCircle, Clock, Calendar, ChevronRight,MessageSquare,LayoutTemplate,Flame,Send,Kanban,Cable
 } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import { API_BASE } from '@/lib/api'
@@ -17,7 +17,7 @@ const NAV = [
   { to: '/template',            icon: MessageSquare,   label: 'Templates'  },
   { to: '/campaigns',           icon: Send,            label: 'Campaigns'  },
   { to: '/LeadInterestdetails', icon: Flame,           label: 'LeadInterestdetails'  },
-  { to: '/whatsapp-connect', icon: Flame,           label: 'whatsappconnect'  },
+  { to: '/whatsapp-connect', icon: Cable,           label: 'whatsappconnect'  },
 ]
 
 // ─── Types ─────────────────────────────────────────────────────
