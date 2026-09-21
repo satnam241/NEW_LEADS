@@ -202,7 +202,7 @@ export default function FilterBar({
             value={filters.interest || ''}
             onChange={set('interest')}
           >
-            <option value="" style={{ color: '#ffffff' }}>All Temperatures</option>
+            <option value="" style={{ color: '#ffffff' }}>All Category</option>
             <option value="hot" style={{ color: '#fca5a5' }}>🔥 Hot Leads</option>
             <option value="warm" style={{ color: '#fcd34d' }}>🌤️ Warm Leads</option>
             <option value="cold" style={{ color: '#93c5fd' }}>❄️ Cold Leads</option>
