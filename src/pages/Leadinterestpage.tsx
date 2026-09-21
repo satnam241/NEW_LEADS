@@ -396,9 +396,15 @@ function StepModal({ open, step, stepNumber, onClose, onSave }: StepModalProps) 
 
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-              <label style={{ fontSize: 13, fontWeight: 600, color: '#cbd5e1' }}>
-                Options (Choose 3-4 options) <span style={{ color: '#ef4444' }}>*</span>
-              </label>
+              <div>
+                <label style={{ fontSize: 13, fontWeight: 700, color: '#f8fafc', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span>🔘 Interactive Buttons (WhatsApp Quick-Reply)</span>
+                  <span style={{ color: '#ef4444' }}>*</span>
+                </label>
+                <div style={{ fontSize: 11.5, color: '#94a3b8', marginTop: 2 }}>
+                  Rendered as real clickable buttons on WhatsApp (not plain numbers)
+                </div>
+              </div>
               <button
                 type="button"
                 onClick={handleAddOption}
@@ -407,16 +413,16 @@ function StepModal({ open, step, stepNumber, onClose, onSave }: StepModalProps) 
                   color: '#60a5fa',
                   border: '1px solid rgba(59,130,246,0.3)',
                   borderRadius: 6,
-                  padding: '4px 10px',
+                  padding: '5px 12px',
                   fontSize: 12,
                   fontWeight: 600,
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: 4,
+                  gap: 5,
                 }}
               >
-                <Plus size={13} /> Add Option
+                <Plus size={13} /> Add Button
               </button>
             </div>
 
@@ -437,26 +443,25 @@ function StepModal({ open, step, stepNumber, onClose, onSave }: StepModalProps) 
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <span
                       style={{
-                        background: '#334155',
-                        color: '#f1f5f9',
-                        fontSize: 12,
+                        background: '#2563eb',
+                        color: '#ffffff',
+                        fontSize: 11,
                         fontWeight: 700,
-                        width: 24,
-                        height: 24,
-                        borderRadius: '50%',
-                        display: 'flex',
+                        padding: '4px 8px',
+                        borderRadius: 6,
+                        display: 'inline-flex',
                         alignItems: 'center',
-                        justifyContent: 'center',
+                        gap: 4,
                         flexShrink: 0,
                       }}
                     >
-                      {idx + 1}
+                      🔘 Button {idx + 1}
                     </span>
                     <input
                       type="text"
                       className="campaign-control"
                       style={{ flex: 1 }}
-                      placeholder={`Option ${idx + 1} title (e.g. 2BHK Apartment)`}
+                      placeholder={`Button text (e.g. 2BHK Apartment)`}
                       value={opt.title}
                       onChange={e => handleOptionChange(idx, 'title', e.target.value)}
                       required
@@ -566,9 +571,12 @@ export default function LeadInterestPage() {
     setFlowError('')
     try {
       const steps = await fetchBotFlow()
-      setFlowSteps(steps)
-      if (steps.length > 0 && steps[0].options && steps[0].options.length > 0) {
-        setPreviewSelectedOpt(steps[0].options[0].title)
+      const validSteps = Array.isArray(steps) ? steps : []
+      setFlowSteps(validSteps)
+      if (validSteps.length > 0 && validSteps[0].options && validSteps[0].options.length > 0) {
+        setPreviewSelectedOpt(validSteps[0].options[0].title)
+      } else {
+        setPreviewSelectedOpt('')
       }
     } catch (err) {
       setFlowError(err instanceof Error ? err.message : 'Failed to load bot flow')
@@ -604,11 +612,15 @@ export default function LeadInterestPage() {
 
   const handleDeleteStep = async (id: string) => {
     try {
-      await deleteBotFlowStep(id)
+      setFlowError('')
+      // Instantly update UI optimistically
+      setFlowSteps(prev => prev.filter(s => s._id !== id))
       setDeleteConfirmId(null)
+      await deleteBotFlowStep(id)
       await loadFlow()
     } catch (e: any) {
       setFlowError(e.message || 'Failed to delete step')
+      await loadFlow()
     }
   }
 
@@ -951,33 +963,53 @@ export default function LeadInterestPage() {
                       </div>
                     </div>
 
-                    {/* Options list */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginLeft: 2 }}>
-                      <span style={{ fontSize: 11.5, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase' }}>
-                        Options Presented to User ({step.options.length}):
-                      </span>
+                    {/* Interactive Buttons list */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginLeft: 2 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: 11.5, fontWeight: 700, color: '#60a5fa', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                          🔘 Interactive Buttons ({step.options.length}):
+                        </span>
+                        <span style={{ fontSize: 11, color: '#94a3b8', background: 'rgba(255,255,255,0.06)', padding: '2px 8px', borderRadius: 4 }}>
+                          WhatsApp Quick-Reply Buttons
+                        </span>
+                      </div>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                         {step.options.map((opt, oIdx) => (
                           <div
                             key={opt.id || oIdx}
                             style={{
-                              background: '#2A2A2A',
-                              border: '1px solid rgba(255,255,255,0.08)',
-                              borderRadius: 8,
-                              padding: '6px 12px',
+                              background: 'linear-gradient(135deg, rgba(37,99,235,0.12) 0%, rgba(30,41,59,0.7) 100%)',
+                              border: '1px solid rgba(96,165,250,0.35)',
+                              borderRadius: 10,
+                              padding: '8px 14px',
                               fontSize: 12.5,
-                              color: '#cbd5e1',
+                              color: '#ffffff',
                               display: 'flex',
                               flexDirection: 'column',
-                              gap: 2,
+                              gap: 4,
+                              boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
                             }}
                           >
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                              <span style={{ color: '#60a5fa', fontWeight: 700 }}>{oIdx + 1}.</span>
-                              <strong>{opt.title}</strong>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                              <span
+                                style={{
+                                  background: '#2563eb',
+                                  color: '#fff',
+                                  fontSize: 10.5,
+                                  fontWeight: 700,
+                                  padding: '2px 7px',
+                                  borderRadius: 5,
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: 4,
+                                }}
+                              >
+                                🔘 Button
+                              </span>
+                              <strong style={{ color: '#ffffff', fontSize: 13 }}>{opt.title}</strong>
                             </div>
                             {opt.detailText && (
-                              <span style={{ fontSize: 11, color: '#94a3b8', fontStyle: 'italic' }}>
+                              <span style={{ fontSize: 11, color: '#94a3b8', fontStyle: 'italic', paddingLeft: 4 }}>
                                 💬 Auto-reply: "{opt.detailText}"
                               </span>
                             )}
@@ -1122,14 +1154,14 @@ export default function LeadInterestPage() {
                         Hello, I'm your ChatBot Real Estate Agent! 🏡👋
                       </div>
 
-                      {/* Bot Question & Clickable Options Card */}
+                      {/* Bot Question & Interactive Buttons Card */}
                       <div
                         style={{
                           background: '#ffffff',
                           borderRadius: 12,
                           border: '1.5px solid #cbd5e1',
                           overflow: 'hidden',
-                          boxShadow: '0 2px 6px rgba(0,0,0,0.04)',
+                          boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
                         }}
                       >
                         {/* Dynamic Question Title */}
@@ -1140,49 +1172,61 @@ export default function LeadInterestPage() {
                             fontWeight: 600,
                             color: '#1e293b',
                             lineHeight: 1.45,
+                            borderBottom: '1px solid #f1f5f9',
                           }}
                         >
                           {activeStep.question || 'Choose what are you interested in:'}
+                          <div style={{ fontSize: 11, color: '#64748b', marginTop: 4, fontWeight: 400 }}>
+                            Tap an option button below:
+                          </div>
                         </div>
 
-                        {/* Dynamic Clickable Options from User Configuration */}
+                        {/* Dynamic Clickable WhatsApp Buttons */}
                         {activeStep.options && activeStep.options.length > 0 ? (
-                          <div>
+                          <div style={{ padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 6, background: '#f8fafc' }}>
                             {activeStep.options.map((opt, i) => {
                               const isSelected = selectedOptionTitle === opt.title
                               return (
-                                <div
+                                <button
                                   key={opt.id || i}
+                                  type="button"
                                   onClick={() => setPreviewSelectedOpt(opt.title)}
                                   style={{
-                                    borderTop: '1px solid #e2e8f0',
-                                    padding: '10px 14px',
+                                    border: isSelected ? '1.5px solid #2563eb' : '1px solid #cbd5e1',
+                                    borderRadius: 8,
+                                    padding: '9px 14px',
                                     textAlign: 'center',
-                                    fontSize: 13,
-                                    fontWeight: 600,
-                                    color: '#2563eb',
+                                    fontSize: 12.5,
+                                    fontWeight: 700,
+                                    color: isSelected ? '#ffffff' : '#2563eb',
                                     cursor: 'pointer',
-                                    background: isSelected ? '#eff6ff' : '#ffffff',
-                                    transition: 'background 0.15s ease',
+                                    background: isSelected ? '#2563eb' : '#ffffff',
+                                    boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: 7,
+                                    width: '100%',
+                                    transition: 'all 0.15s ease',
                                   }}
-                                  title="Click to test user reply"
+                                  title="Tap button to simulate selection"
                                 >
-                                  {opt.title}
-                                </div>
+                                  <span style={{ fontSize: 12 }}>🔘</span>
+                                  <span>{opt.title}</span>
+                                </button>
                               )
                             })}
                           </div>
                         ) : (
                           <div
                             style={{
-                              borderTop: '1px solid #e2e8f0',
-                              padding: '10px 14px',
+                              padding: '12px 14px',
                               textAlign: 'center',
                               color: '#94a3b8',
                               fontSize: 12,
                             }}
                           >
-                            No options added for this step yet.
+                            No buttons added for this step yet.
                           </div>
                         )}
                       </div>
