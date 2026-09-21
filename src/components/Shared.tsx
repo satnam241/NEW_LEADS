@@ -1,4 +1,3 @@
-
 import { Phone, MessageCircle, Mail } from 'lucide-react'
 import type { LeadStatus, Lead } from '@/types'
 
@@ -7,21 +6,22 @@ export function StatusBadge({ status }: { status: LeadStatus }) {
   return <span className={`badge badge-${status}`}>{status}</span>
 }
 
-// ─── SourceBadge — backend sources included ───────────────────────────────────
+// ─── SourceBadge ─────────────────────────────────────────────────────────────
 const SOURCE_STYLES: Record<string, { bg: string; color: string; label: string }> = {
-  'facebook':  { bg: 'rgba(76,110,245,.14)', color: '#7ea6ff', label: '📘 Facebook' },
-  'whatsapp':  { bg: 'rgba(76,110,245,.14)', color: '#4ade80', label: '💬 WhatsApp' },
-  'Meta Ads':  { bg: 'rgba(76,110,245,.14)', color: '#8b9cff', label: 'Meta Ads'   },
-  'Manual':    { bg: 'rgba(76,110,245,.14)', color: '#cbd5e1', label: 'Manual'      },
-  'Imported':  { bg: 'rgba(76,110,245,.14)', color: '#67e8f9', label: 'Imported'    },
+  'facebook':  { bg: 'rgba(59, 130, 246, 0.16)', color: '#60a5fa', label: '📘 Facebook' },
+  'whatsapp':  { bg: 'rgba(34, 197, 94, 0.16)',  color: '#4ade80', label: '💬 WhatsApp' },
+  'Meta Ads':  { bg: 'rgba(139, 92, 246, 0.16)', color: '#a78bfa', label: 'Meta Ads'   },
+  'Manual':    { bg: 'rgba(148, 163, 184, 0.16)', color: '#cbd5e1', label: 'Manual'     },
+  'Imported':  { bg: 'rgba(6, 182, 212, 0.16)',  color: '#22d3ee', label: 'Imported'   },
 }
 
 export function SourceBadge({ source }: { source: string }) {
-  const style = SOURCE_STYLES[source] ?? { bg: '#f8fafc', color: '#64748b', label: source }
+  const style = SOURCE_STYLES[source] ?? { bg: 'rgba(255, 255, 255, 0.08)', color: '#94a3b8', label: source }
   return (
     <span style={{
       fontSize: 11, fontWeight: 600, padding: '2px 9px', borderRadius: 99,
       background: style.bg, color: style.color,
+      border: `1px solid ${style.bg}`,
       display: 'inline-flex', alignItems: 'center', whiteSpace: 'nowrap',
     }}>
       {style.label}
@@ -31,44 +31,40 @@ export function SourceBadge({ source }: { source: string }) {
 
 // ─── Avatar ───────────────────────────────────────────────────────────────────
 const AVATAR_COLORS = [
-  { bg: '#eff4ff', color: '#4c6ef5' },
-  { bg: '#f5f3ff', color: '#7c3aed' },
-  { bg: '#fffbeb', color: '#d97706' },
-  { bg: '#f0fdf4', color: '#16a34a' },
-  { bg: '#fef2f2', color: '#dc2626' },
-  { bg: '#f0f9ff', color: '#0284c7' },
+  { bg: 'rgba(76, 110, 245, 0.22)', color: '#77a8ff' },
+  { bg: 'rgba(139, 92, 246, 0.22)', color: '#c4b5fd' },
+  { bg: 'rgba(245, 158, 11, 0.22)', color: '#fcd34d' },
+  { bg: 'rgba(34, 197, 94, 0.22)',  color: '#86efac' },
+  { bg: 'rgba(239, 68, 68, 0.22)',  color: '#fca5a5' },
+  { bg: 'rgba(14, 165, 233, 0.22)', color: '#7dd3fc' },
 ]
 
-export function Avatar({ name, size = 8 }: { name: string; size?: number }) {
-  const code    = (name?.charCodeAt(0) ?? 65) + (name?.charCodeAt(1) ?? 65)
-  const palette = AVATAR_COLORS[code % AVATAR_COLORS.length]
-  const initials = (name ?? '?').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
-  const px = size * 4   // Tailwind size → px (size=8 → 32px)
+export function Avatar({ name, size = 32 }: { name: string; size?: number }) {
+  const safeName = name || '?'
+  const code     = (safeName.charCodeAt(0) ?? 65) + (safeName.charCodeAt(1) ?? 65)
+  const palette  = AVATAR_COLORS[code % AVATAR_COLORS.length]
+  const initials = safeName.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
+  const pxSize   = size < 16 ? size * 4 : size
 
- //const size = 32 // 👈 define karo (px ka replacement)
-
-const safePalette = palette || {
-  bg: '#e5e7eb',
-  color: '#374151'
-}
-
-return (
-  <div style={{
-    width: size,
-    height: size,
-    borderRadius: '50%',
-    background: safePalette.bg,   // ✅ safe
-    color: safePalette.color,     // ✅ safe
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: size < 28 ? 10 : 12,
-    fontWeight: 700,
-    flexShrink: 0,
-  }}>
-    {initials || '?'}
-  </div>
-)
+  return (
+    <div style={{
+      width: pxSize,
+      height: pxSize,
+      borderRadius: '50%',
+      background: palette.bg,
+      color: palette.color,
+      border: `1px solid ${palette.color}33`,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      fontSize: pxSize < 28 ? 10.5 : 12.5,
+      fontWeight: 700,
+      flexShrink: 0,
+      userSelect: 'none',
+    }}>
+      {initials || '?'}
+    </div>
+  )
 }
 
 // ─── ContactButtons ───────────────────────────────────────────────────────────
@@ -84,7 +80,7 @@ export function ContactButtons({ lead }: { lead: Lead }) {
           target="_blank"
           rel="noreferrer"
           className="btn-wa"
-          style={{ padding: '4px 10px', fontSize: 11, display: 'flex', alignItems: 'center', gap: 4 }}
+          style={{ padding: '4px 9px', fontSize: 11, display: 'flex', alignItems: 'center', gap: 4 }}
           title="WhatsApp"
           onClick={e => e.stopPropagation()}
         >
@@ -95,7 +91,7 @@ export function ContactButtons({ lead }: { lead: Lead }) {
         <a
           href={`tel:${lead.phone}`}
           className="btn-green"
-          style={{ padding: '4px 10px', fontSize: 11, display: 'flex', alignItems: 'center', gap: 4 }}
+          style={{ padding: '4px 9px', fontSize: 11, display: 'flex', alignItems: 'center', gap: 4 }}
           title="Call"
           onClick={e => e.stopPropagation()}
         >
@@ -105,34 +101,14 @@ export function ContactButtons({ lead }: { lead: Lead }) {
       {lead.email && (
         <a
           href={`mailto:${lead.email}`}
-          style={{
-            padding: '4px 10px', fontSize: 11, display: 'inline-flex', alignItems: 'center', gap: 4,
-            borderRadius: 8, fontWeight: 600,
-            background: '#f8fafc', color: '#475569', border: '1px solid #e2e8f0',
-            textDecoration: 'none', transition: 'background 120ms',
-          }}
+          className="btn-secondary"
+          style={{ padding: '4px 9px', fontSize: 11, display: 'flex', alignItems: 'center', gap: 4 }}
           title="Email"
           onClick={e => e.stopPropagation()}
         >
-          <Mail size={11} /> Mail
+          <Mail size={11} /> Email
         </a>
       )}
     </div>
-  )
-}
-
-// ─── SkeletonRow ──────────────────────────────────────────────────────────────
-export function SkeletonRow({ cols = 6 }: { cols?: number }) {
-  return (
-    <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
-      {[...Array(cols)].map((_, i) => (
-        <td key={i} style={{ padding: '12px 16px' }}>
-          <div
-            className="skeleton"
-            style={{ height: 13, borderRadius: 6, width: `${50 + (i * 13) % 40}%` }}
-          />
-        </td>
-      ))}
-    </tr>
   )
 }

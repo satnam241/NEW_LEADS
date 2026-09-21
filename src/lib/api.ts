@@ -116,6 +116,7 @@ export function mapLead(raw: any): Lead {
 
     assigned_to: raw.assignedTo ?? null,   // pehle wala
     assigned_by: raw.assignedBy ?? null, 
+    interestLevel: raw.interestLevel ?? null,
 
     followup_date,
     followup_note: followUpRaw?.message ?? null,
@@ -232,7 +233,10 @@ export async function createLead(lead: LeadInsert): Promise<Lead> {
     headers: authHeaders(),
     body:    JSON.stringify(body),
   })
-  if (!res.ok) throw new Error('Failed to create lead')
+  if (!res.ok) {
+    const errData = await res.json().catch(() => null)
+    throw new Error(errData?.error || errData?.message || 'Failed to create lead')
+  }
 
   const data = await res.json()
 
@@ -707,6 +711,7 @@ export async function fetchLeads(
   if (filters.source?.trim())   params.set('source',   filters.source.trim())
   if (filters.dateFrom?.trim()) params.set('dateFrom', filters.dateFrom.trim())
   if (filters.dateTo?.trim())   params.set('dateTo',   filters.dateTo.trim())
+  if (filters.interest?.trim()) params.set('interest', filters.interest.trim().toLowerCase())
 
   const res = await fetch(`${API_BASE}/admin/leads?${params.toString()}`, {
     headers: authHeaders(),
@@ -820,4 +825,283 @@ export async function createAssignee(name: string): Promise<Assignee> {
   if (!res.ok) throw new Error('Failed to save name')
   const data = await res.json()
   return data.data
+}
+
+
+// Paste into your real api.ts, alongside your other additions.
+
+export interface BaileysStatus {
+  status: 'connecting' | 'open' | 'close'
+  qr: string | null // data URL, present only while status is 'connecting' and unscanned
+}
+
+export async function fetchBaileysStatus(): Promise<BaileysStatus> {
+  const res = await fetch(`${API_BASE}/baileys/status`, { headers: authHeaders() })
+  return handleResponse<BaileysStatus>(res)
+}
+
+export async function resetBaileysSession(): Promise<{ success: boolean; message: string }> {
+  const res = await fetch(`${API_BASE}/baileys/reset`, { method: 'POST', headers: authHeaders() })
+  return handleResponse<{ success: boolean; message: string }>(res)
+}
+
+export async function uploadTemplateImage(file: File): Promise<{ url: string; relativeUrl: string; filename: string }> {
+  const formData = new FormData()
+  formData.append('image', file)
+  const token = localStorage.getItem('token') ?? ''
+  const headers: HeadersInit = {}
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`
+  }
+  const res = await fetch(`${API_BASE}/templates/upload`, {
+    method: 'POST',
+    headers,
+    body: formData,
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => null)
+    throw new Error(err?.message || 'Failed to upload image')
+  }
+  return res.json()
+}
+
+export interface SimpleTemplate {
+  _id: string
+  name: string
+  label: string
+  bodyText: string
+  variables: string[]
+  header?: string | null
+  imageUrl?: string | null
+  footer?: string | null
+  type?: 'text' | 'advertise'
+  options?: string[]
+  createdAt: string
+}
+
+export async function fetchTemplates(): Promise<SimpleTemplate[]> {
+  const res = await fetch(`${API_BASE}/templates`, { headers: authHeaders() })
+  return handleResponse<SimpleTemplate[]>(res)
+}
+
+export async function createTemplate(payload: {
+  name: string
+  label: string
+  bodyText: string
+  variables?: string[]
+  header?: string | null
+  imageUrl?: string | null
+  footer?: string | null
+  type?: 'text' | 'advertise'
+  options?: string[]
+}): Promise<SimpleTemplate> {
+  const res = await fetch(`${API_BASE}/templates`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify(payload),
+  })
+  return handleResponse<SimpleTemplate>(res)
+}
+
+export async function updateTemplate(
+  id: string,
+  payload: {
+    label?: string
+    bodyText?: string
+    variables?: string[]
+    header?: string | null
+    imageUrl?: string | null
+    footer?: string | null
+    type?: 'text' | 'advertise'
+    options?: string[]
+  }
+): Promise<SimpleTemplate> {
+  const res = await fetch(`${API_BASE}/templates/${id}`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify(payload),
+  })
+  return handleResponse<SimpleTemplate>(res)
+}
+
+export async function deleteTemplate(id: string): Promise<{ message: string }> {
+  const res = await fetch(`${API_BASE}/templates/${id}`, { method: 'DELETE', headers: authHeaders() })
+  return handleResponse<{ message: string }>(res)
+}
+
+export type CampaignStatus = 'Draft' | 'Running' | 'Completed' | 'Failed'
+
+export interface Campaign {
+  _id: string
+  name: string
+  audience: string
+  template: string
+  recipients: number
+  sent: number
+  failed: number
+  status: CampaignStatus
+  recipientStatuses: { leadId: string; name: string; phone: string; status: string; error?: string }[]
+  createdAt: string
+}
+
+export async function fetchCampaigns(params: { search?: string; status?: string; audience?: string } = {}): Promise<Campaign[]> {
+  const q = new URLSearchParams()
+  if (params.search) q.set('search', params.search)
+  if (params.status && params.status !== 'All') q.set('status', params.status)
+  if (params.audience && params.audience !== 'All') q.set('audience', params.audience)
+  const res = await fetch(`${API_BASE}/campaigns?${q}`, { headers: authHeaders() })
+  return handleResponse<Campaign[]>(res)
+}
+
+export async function fetchCampaignStats(): Promise<{ total: number; active: number; sent: number; failed: number }> {
+  const res = await fetch(`${API_BASE}/campaigns/stats`, { headers: authHeaders() })
+  return handleResponse(res)
+}
+
+export async function fetchAudienceCounts(): Promise<Record<string, number>> {
+  const res = await fetch(`${API_BASE}/campaigns/audiences`, { headers: authHeaders() })
+  return handleResponse<Record<string, number>>(res)
+}
+
+export async function createCampaign(payload: {
+  name: string
+  audience: string
+  template: string
+  action: 'draft' | 'send'
+}): Promise<Campaign> {
+  const res = await fetch(`${API_BASE}/campaigns`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify(payload),
+  })
+  return handleResponse<Campaign>(res)
+}
+
+// ─── Lead Interest (Hot / Warm / Cold) ─────────────────────────────────────
+
+export type InterestLevel = 'hot' | 'warm' | 'cold'
+
+export interface LeadRef {
+  _id: string
+  fullName?: string
+  phone?: string
+}
+
+export interface LeadInterestRow {
+  leadId: LeadRef | string
+  phone: string
+  currentStep: string
+  totalSteps: number
+  stepsCompleted: number
+  interest: InterestLevel
+  attemptCount: number
+  deliveryStatus?: 'sent' | 'delivered' | 'read' | 'replied'
+  lastMessageFromUser?: string | null
+  lastMessageAt?: string | null
+  conversationDurationSec: number
+  startedAt: string
+  completedAt?: string
+  lastActiveAt: string
+}
+
+export interface ConversationAnswerRow {
+  step: string
+  optionId: string
+  optionTitle: string
+  answeredAt: string
+}
+
+export interface LeadInterestDetail {
+  leadId: LeadRef | string
+  phone: string
+  currentStep: string
+  answers: ConversationAnswerRow[]
+  attemptCount: number
+  totalSteps: number
+  interest: InterestLevel
+  startedAt: string
+  completedAt?: string
+  lastActiveAt: string
+}
+
+export async function fetchLeadInterestList(sortBy: 'interest' | 'recent' = 'interest'): Promise<LeadInterestRow[]> {
+  const res = await fetch(`${API_BASE}/lead-interest?sortBy=${sortBy}`, { headers: authHeaders() })
+  return handleResponse<LeadInterestRow[]>(res)
+}
+
+export async function fetchLeadInterestDetail(leadId: string): Promise<LeadInterestDetail> {
+  const res = await fetch(`${API_BASE}/lead-interest/${leadId}`, { headers: authHeaders() })
+  return handleResponse<LeadInterestDetail>(res)
+}
+
+// ─── WhatsApp Bot Flow (Questions & Options) ─────────────────────────────
+
+export interface FlowOption {
+  id: string
+  title: string
+  detailText?: string
+}
+
+export interface BotFlowStep {
+  _id: string
+  stepOrder: number
+  stepKey: string
+  question: string
+  options: FlowOption[]
+  isActive: boolean
+  createdAt?: string
+  updatedAt?: string
+}
+
+export async function fetchBotFlow(): Promise<BotFlowStep[]> {
+  const res = await fetch(`${API_BASE}/bot-flow`, { headers: authHeaders() })
+  return handleResponse<BotFlowStep[]>(res)
+}
+
+export async function createBotFlowStep(payload: {
+  question: string
+  options: FlowOption[]
+  stepOrder?: number
+  isActive?: boolean
+}): Promise<BotFlowStep> {
+  const res = await fetch(`${API_BASE}/bot-flow`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify(payload),
+  })
+  return handleResponse<BotFlowStep>(res)
+}
+
+export async function updateBotFlowStep(
+  id: string,
+  payload: Partial<{
+    question: string
+    options: FlowOption[]
+    stepOrder: number
+    isActive: boolean
+  }>
+): Promise<BotFlowStep> {
+  const res = await fetch(`${API_BASE}/bot-flow/${id}`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify(payload),
+  })
+  return handleResponse<BotFlowStep>(res)
+}
+
+export async function deleteBotFlowStep(id: string): Promise<{ message: string }> {
+  const res = await fetch(`${API_BASE}/bot-flow/${id}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  })
+  return handleResponse<{ message: string }>(res)
+}
+
+export async function reorderBotFlowSteps(stepIds: string[]): Promise<BotFlowStep[]> {
+  const res = await fetch(`${API_BASE}/bot-flow/reorder`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ stepIds }),
+  })
+  return handleResponse<BotFlowStep[]>(res)
 }

@@ -1,41 +1,104 @@
 import { useState } from 'react'
 import { usePipeline, useUpdateLead } from '@/hooks/useLeads'
-import { ContactButtons, Avatar } from '@/components/Shared'
+import { ContactButtons, Avatar, SourceBadge } from '@/components/Shared'
 import LeadModal from '@/components/modals/LeadModal'
 import type { Lead, LeadStatus, LeadInsert } from '@/types'
 import { format } from 'date-fns'
 import { CalendarClock } from 'lucide-react'
 
 const COLUMNS: { status: LeadStatus; label: string; color: string; bg: string; dot: string }[] = [
-  { status: 'New',         label: 'New',         color: 'text-blue-700',   bg: 'bg-blue-50',   dot: 'bg-blue-500'   },
-  { status: 'Contacted',   label: 'Contacted',   color: 'text-amber-700',  bg: 'bg-amber-50',  dot: 'bg-amber-500'  },
-  { status: 'Negotiation', label: 'Negotiation', color: 'text-violet-700', bg: 'bg-violet-50', dot: 'bg-violet-500' },
-  { status: 'Visitor',     label: 'Visitor',     color: 'text-cyan-700',   bg: 'bg-cyan-50',   dot: 'bg-cyan-500'   },
-  { status: 'Closed',      label: 'Closed Won',  color: 'text-green-700',  bg: 'bg-green-50',  dot: 'bg-green-500'  },
-  { status: 'Lost',        label: 'Lost',        color: 'text-red-600',    bg: 'bg-red-50',    dot: 'bg-red-500'    },
+  { status: 'New',         label: 'New',         color: '#38bdf8', bg: 'rgba(56, 189, 248, 0.14)',  dot: '#38bdf8' },
+  { status: 'Contacted',   label: 'Contacted',   color: '#fbbf24', bg: 'rgba(245, 158, 11, 0.14)',  dot: '#fbbf24' },
+  { status: 'Negotiation', label: 'Negotiation', color: '#c084fc', bg: 'rgba(167, 139, 250, 0.14)', dot: '#c084fc' },
+  { status: 'Visitor',     label: 'Visitor',     color: '#22d3ee', bg: 'rgba(6, 182, 212, 0.14)',   dot: '#22d3ee' },
+  { status: 'Closed',      label: 'Closed Won',  color: '#4ade80', bg: 'rgba(34, 197, 94, 0.14)',   dot: '#4ade80' },
+  { status: 'Lost',        label: 'Lost',        color: '#f87171', bg: 'rgba(239, 68, 68, 0.14)',   dot: '#f87171' },
 ]
 
 function LeadCard({ lead, onEdit }: { lead: Lead; onEdit: (l: Lead) => void }) {
-  return ( 
-  <div className="bg-white border border-slate-200 rounded-xl p-3 shadow-sm hover:shadow-md transition-shadow cursor-pointer group overflow-hidden" onClick={() => onEdit(lead)}>
-      <div className="flex items-start gap-2 mb-2">
-        <Avatar name={lead.name} size={7} />
-        <div className="flex-1 min-w-0">
-          <p className="font-medium text-slate-900 text-xs leading-tight truncate">{lead.name}</p>
-          <p className="text-[10px] text-slate-400 mt-0.5 truncate">{lead.phone ?? lead.email ?? '—'}</p>
+  const isOverdue = lead.followup_date && new Date(lead.followup_date) < new Date() && !lead.followup_done
+
+  return (
+    <div
+      className="card"
+      onClick={() => onEdit(lead)}
+      style={{
+        padding: '12px 14px',
+        cursor: 'pointer',
+        background: '#2A2A2A',
+        borderRadius: 12,
+        border: '1px solid rgba(255, 255, 255, 0.08)',
+        transition: 'transform 120ms ease, border-color 120ms ease, box-shadow 120ms ease',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 8,
+      }}
+      onMouseEnter={e => {
+        e.currentTarget.style.borderColor = 'rgba(76, 110, 245, 0.45)'
+        e.currentTarget.style.transform = 'translateY(-2px)'
+        e.currentTarget.style.boxShadow = '0 6px 18px rgba(0,0,0,0.25)'
+      }}
+      onMouseLeave={e => {
+        e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.08)'
+        e.currentTarget.style.transform = 'translateY(0)'
+        e.currentTarget.style.boxShadow = 'none'
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 9 }}>
+        <Avatar name={lead.name} size={28} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p style={{
+            fontSize: 13, fontWeight: 700, color: '#ffffff',
+            margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'
+          }}>
+            {lead.name}
+          </p>
+          <p style={{
+            fontSize: 11, color: '#94a3b8', margin: '2px 0 0',
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'
+          }}>
+            {lead.phone ?? lead.email ?? '—'}
+          </p>
         </div>
       </div>
-      <div className="text-[10px] text-slate-400 mb-2">
-        <span className="bg-slate-100 px-1.5 py-0.5 rounded text-slate-600">{lead.source}</span>
+
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, flexWrap: 'wrap' }}>
+        <SourceBadge source={lead.source} />
+        {lead.assigned_to && (
+          <span style={{ fontSize: 10.5, color: '#77a8ff', fontWeight: 600 }}>
+            👤 {lead.assigned_to}
+          </span>
+        )}
       </div>
+
       {lead.followup_date && !lead.followup_done && (
-        <div className={`flex items-center gap-1 text-[10px] mb-2 ${new Date(lead.followup_date) < new Date() ? 'text-red-600' : 'text-amber-600'}`}>
-          <CalendarClock size={9} />
-          {format(new Date(lead.followup_date), 'MMM d')} — {lead.followup_note || 'Follow-up'}
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 5, fontSize: 11,
+          color: isOverdue ? '#f87171' : '#fbbf24',
+          background: isOverdue ? 'rgba(239, 68, 68, 0.1)' : 'rgba(245, 158, 11, 0.1)',
+          padding: '3px 7px', borderRadius: 6,
+        }}>
+          <CalendarClock size={11} />
+          <span style={{ fontWeight: 600 }}>
+            {format(new Date(lead.followup_date), 'MMM d')}
+          </span>
+          <span style={{ color: '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            — {lead.followup_note || 'Follow-up'}
+          </span>
         </div>
       )}
-      {lead.note && <p className="text-[10px] text-slate-400 truncate mb-2">{lead.note}</p>}
-      <div className="opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
+
+      {lead.note && (
+        <p style={{
+          fontSize: 11, color: '#cbd5e1', margin: 0,
+          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          background: '#2A2A2A', padding: '3px 7px', borderRadius: 6,
+        }}>
+          {lead.note}
+        </p>
+      )}
+
+      <div style={{ marginTop: 2 }} onClick={e => e.stopPropagation()}>
         <ContactButtons lead={lead} />
       </div>
     </div>
@@ -48,65 +111,123 @@ export default function PipelinePage() {
   const [editLead, setEditLead] = useState<Lead | null>(null)
 
   const handleSave = async (data: LeadInsert) => {
-    if (editLead) await updateM.mutateAsync({ id: editLead.id, updates: data })
+    if (editLead) await updateM.mutateAsync({ id: editLead._id ?? editLead.id, updates: data })
     setEditLead(null)
   }
 
   const byStatus = (status: LeadStatus) => allLeads.filter(l => l.status === status)
 
   return (
-    <div className="space-y-5">
-      <div>
-        <h1 className="page-title">Pipeline</h1>
-        <p className="page-sub">{allLeads.length} total leads across all stages</p>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+      {/* Page Header */}
+      <div className="page-header" style={{ margin: 0 }}>
+        <div>
+          <h1 className="page-title">Sales Pipeline</h1>
+          <p className="page-sub">{allLeads.length} total leads moving through the stages</p>
+        </div>
       </div>
 
-      {/* Summary bar */}
-      <div className="flex gap-2 flex-wrap">
+      {/* Summary Chips Bar */}
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         {COLUMNS.map(col => {
           const count = byStatus(col.status).length
           const pct = allLeads.length > 0 ? Math.round((count / allLeads.length) * 100) : 0
+
           return (
-            <div key={col.status} className={`${col.bg} border border-slate-200 rounded-xl px-3 py-2 flex items-center gap-2`}>
-              <span className={`w-2 h-2 rounded-full flex-shrink-0 ${col.dot}`} />
-              <span className={`text-xs font-semibold ${col.color}`}>{col.label}</span>
-              <span className="text-xs text-slate-500">{count} · {pct}%</span>
+            <div
+              key={col.status}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 8,
+                padding: '7px 12px', borderRadius: 10,
+                background: col.bg,
+                border: `1px solid ${col.color}33`,
+              }}
+            >
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: col.dot }} />
+              <span style={{ fontSize: 12, fontWeight: 700, color: col.color }}>{col.label}</span>
+              <span style={{ fontSize: 11.5, color: '#cbd5e1', fontWeight: 600 }}>
+                {count} <span style={{ color: '#94a3b8' }}>({pct}%)</span>
+              </span>
             </div>
           )
         })}
       </div>
 
+      {/* Kanban Board Grid */}
       {isLoading ? (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+          gap: 14,
+        }}>
           {COLUMNS.map(col => (
-            <div key={col.status} className="space-y-2">
-              <div className="h-8 bg-slate-100 rounded-lg animate-pulse" />
-              {[...Array(3)].map((_, i) => <div key={i} className="h-24 bg-slate-100 rounded-xl animate-pulse" />)}
+            <div key={col.status} style={{ background: '#3C3C3C', borderRadius: 14, padding: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div className="skeleton" style={{ height: 32, borderRadius: 8 }} />
+              <div className="skeleton" style={{ height: 90, borderRadius: 10 }} />
+              <div className="skeleton" style={{ height: 90, borderRadius: 10 }} />
             </div>
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 items-start">
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+          gap: 14,
+          alignItems: 'flex-start',
+        }}>
           {COLUMNS.map(col => {
             const colLeads = byStatus(col.status)
+
             return (
-              <div key={col.status} className="min-w-0">
+              <div
+                key={col.status}
+                style={{
+                  background: '#3C3C3C',
+                  border: '1px solid rgba(255, 255, 255, 0.08)',
+                  borderRadius: 16,
+                  boxShadow: '0 10px 30px rgba(0,0,0,0.18)',
+                  padding: 12,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 10,
+                }}
+              >
                 {/* Column header */}
-                <div className={`flex items-center justify-between mb-3 px-3 py-2 ${col.bg} rounded-xl border border-slate-200`}>
-                  <div className="flex items-center gap-2">
-                    <span className={`w-2 h-2 rounded-full ${col.dot}`} />
-                    <span className={`text-xs font-semibold ${col.color}`}>{col.label}</span>
+                <div style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '8px 10px', borderRadius: 10,
+                  background: col.bg, border: `1px solid ${col.color}22`,
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                    <span style={{ width: 7, height: 7, borderRadius: '50%', background: col.dot }} />
+                    <span style={{ fontSize: 12.5, fontWeight: 700, color: col.color }}>{col.label}</span>
                   </div>
-                  <span className={`text-xs font-bold ${col.color} bg-white px-1.5 py-0.5 rounded-full border border-slate-200`}>{colLeads.length}</span>
+                  <span style={{
+                    fontSize: 11, fontWeight: 800, color: col.color,
+                    background: 'rgba(0,0,0,0.3)', padding: '2px 8px', borderRadius: 99,
+                  }}>
+                    {colLeads.length}
+                  </span>
                 </div>
-                {/* Cards */}
-                <div className="space-y-2">
+
+                {/* Cards List */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, minHeight: 80 }}>
                   {colLeads.length === 0 ? (
-                    <div className="border-2 border-dashed border-slate-200 rounded-xl p-4 text-center">
-                      <p className="text-xs text-slate-300">No leads</p>
+                    <div style={{
+                      border: '1px dashed rgba(255, 255, 255, 0.1)',
+                      borderRadius: 12, padding: '24px 12px',
+                      textAlign: 'center',
+                    }}>
+                      <p style={{ fontSize: 11.5, color: '#64748b', margin: 0 }}>No leads in this stage</p>
                     </div>
                   ) : (
-                    colLeads.map(lead => <LeadCard key={lead.id} lead={lead} onEdit={setEditLead} />)
+                    colLeads.map(lead => (
+                      <LeadCard
+                        key={lead._id ?? lead.id}
+                        lead={lead}
+                        onEdit={setEditLead}
+                      />
+                    ))
                   )}
                 </div>
               </div>
@@ -115,7 +236,14 @@ export default function PipelinePage() {
         </div>
       )}
 
-      <LeadModal open={!!editLead} lead={editLead} onClose={() => setEditLead(null)} onSave={handleSave} isSaving={updateM.isPending} />
+      {/* Edit Lead Modal */}
+      <LeadModal
+        open={!!editLead}
+        lead={editLead}
+        onClose={() => setEditLead(null)}
+        onSave={handleSave}
+        isSaving={updateM.isPending}
+      />
     </div>
   )
 }

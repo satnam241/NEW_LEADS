@@ -85,9 +85,6 @@ function avatarColor(name: string) {
 
 // ─────────────────────────────────────────────────────────────────
 // Schedule Modal
-// ✅ FIX — WhatsApp checkbox hataya, date input ab datetime-local hai
-// taaki exact time capture ho aur overdue/due-today usi time ke
-// hisaab se calculate ho.
 // ─────────────────────────────────────────────────────────────────
 function ScheduleModal({
   lead, open, onClose, onSave, isSaving,
@@ -192,9 +189,6 @@ function ScheduleModal({
 
 // ─────────────────────────────────────────────────────────────────
 // Lead Card
-// ✅ FIX — "VIEW DETAILS" ab isi page ki LeadModal ko open karta hai
-// (jisme us specific lead ka pura data dikhega), pehle /leads pe
-// navigate karta tha jo galat lead list dikhata tha.
 // ─────────────────────────────────────────────────────────────────
 function LeadCard({
   lead, onEdit, onDone, onSchedule, isDoing,

@@ -101,16 +101,16 @@ export default function ImportModal({ open, onClose }: Props) {
           maxWidth: 540,
           width: 'calc(100% - 24px)',   /* mobile side gap */
           background: '#3C3C3C',
-          border: '1px solid rgba(255,255,255,.08)',
-          borderRadius: 18,
-          boxShadow: '0 20px 60px rgba(0,0,0,.35)',
+          border: '1px solid rgba(255,255,255,0.1)',
+          borderRadius: 16,
+          boxShadow: '0 24px 64px rgba(0,0,0,.5)',
           display: 'flex', flexDirection: 'column',
           maxHeight: '92vh',
           animation: 'modalIn 200ms cubic-bezier(0.16,1,0.3,1) both',
         }}>
 
           {/* Header */}
-          <div className="modal-header" style={{ flexShrink: 0 }}>
+          <div className="modal-header" style={{ flexShrink: 0, borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
             <div style={{ minWidth: 0 }}>
               <div className="modal-title" style={{ fontSize: 'clamp(13px, 3.5vw, 15px)' }}>
                 📂 Import
@@ -126,8 +126,8 @@ export default function ImportModal({ open, onClose }: Props) {
               onClick={handleClose}
               style={{
                 padding: 6, borderRadius: 8,
-                background: '#2a2a2a',
-                border: '1px solid rgba(255,255,255,.08)',
+                background: 'rgba(255,255,255,0.06)',
+                border: '1px solid rgba(255,255,255,0.1)',
                 cursor: 'pointer', color: '#cbd5e1',
                 display: 'flex', flexShrink: 0,
               }}
@@ -144,8 +144,8 @@ export default function ImportModal({ open, onClose }: Props) {
               <div>
                 <div
                   style={{
-                    background: dragover ? 'rgba(76,110,245,.12)' : '#2a2a2a',
-                    border: dragover ? '1.5px solid #4c6ef5' : '1px dashed rgba(255,255,255,.12)',
+                    background: dragover ? 'rgba(76,110,245,.12)' : '#2A2A2A',
+                    border: dragover ? '1.5px solid #4c6ef5' : '1px dashed rgba(255,255,255,.14)',
                     borderRadius: 14,
                     padding: 'clamp(20px, 5vw, 32px) 16px',
                     textAlign: 'center',
@@ -167,9 +167,9 @@ export default function ImportModal({ open, onClose }: Props) {
 
                 {/* Column guide */}
                 <div style={{
-                  marginTop: 16, background: '#2a2a2a',
+                  marginTop: 16, background: '#2A2A2A',
                   borderRadius: 10, padding: '14px 16px',
-                  border: '1px solid rgba(255,255,255,.06)',
+                  border: '1px solid rgba(255,255,255,.08)',
                 }}>
                   <p style={{ fontSize: 12, fontWeight: 600, color: '#cbd5e1', marginBottom: 10 }}>
                     📋 Supported columns
@@ -235,7 +235,7 @@ export default function ImportModal({ open, onClose }: Props) {
                   <div style={{ overflowX: 'auto', maxHeight: 240, overflowY: 'auto' }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, minWidth: 380 }}>
                       <thead>
-                        <tr style={{ background: '#2a2a2a', position: 'sticky', top: 0 }}>
+                        <tr style={{ background: '#343434', position: 'sticky', top: 0 }}>
                           {['Name', 'Phone', 'Email', 'Source', 'Status'].map(h => (
                             <th key={h} style={{
                               padding: '8px 10px', textAlign: 'left',
@@ -315,7 +315,7 @@ export default function ImportModal({ open, onClose }: Props) {
                   {imported} of {result?.leads.length} complete
                 </p>
                 <div style={{
-                  background: '#2a2a2a', borderRadius: 99, height: 8,
+                  background: '#2A2A2A', borderRadius: 99, height: 8,
                   maxWidth: 300, margin: '0 auto', overflow: 'hidden',
                 }}>
                   <div style={{
@@ -351,7 +351,7 @@ export default function ImportModal({ open, onClose }: Props) {
             className="modal-footer"
             style={{
               borderTop: '1px solid rgba(255,255,255,.06)',
-              background: '#3C3C3C',
+              background: '#343434',
               flexShrink: 0,
               flexWrap: 'wrap',
               gap: 8,

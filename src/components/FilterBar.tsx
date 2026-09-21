@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Search, X, Calendar, SlidersHorizontal } from 'lucide-react'
-import type { LeadFilters, LeadStatus, LeadSource } from '@/types'
+import type { LeadFilters, LeadStatus } from '@/types'
 
 const STATUSES: LeadStatus[] = ['New', 'Contacted', 'Interested', 'Negotiation', 'Visitor', 'Closed', 'Lost']
 
@@ -44,7 +44,7 @@ export default function FilterBar({
   const isMobile = width < 640    // phone
   const isTablet = width < 1024   // tablet / small laptop
 
-  // Mobile pe filters toggle
+  // Mobile filters toggle
   const [expanded, setExpanded] = useState(false)
 
   const set = (key: keyof LeadFilters) =>
@@ -53,10 +53,10 @@ export default function FilterBar({
 
   const hasActive =
     filters.search || filters.status || filters.source ||
-    filters.dateFrom || filters.dateTo
+    filters.dateFrom || filters.dateTo || filters.interest
 
   const clearAll = () =>
-    onChange({ search: '', status: '', source: '', dateFrom: '', dateTo: '' })
+    onChange({ search: '', status: '', source: '', dateFrom: '', dateTo: '', interest: '' })
 
   const dateLabel =
     filters.dateFrom && filters.dateTo ? `${filters.dateFrom} → ${filters.dateTo}`
@@ -67,7 +67,7 @@ export default function FilterBar({
   // Active filter count (for mobile badge)
   const activeCount = [
     filters.search, filters.status, filters.source,
-    filters.dateFrom || filters.dateTo,
+    filters.dateFrom || filters.dateTo, filters.interest,
   ].filter(Boolean).length
 
   return (
@@ -150,8 +150,7 @@ export default function FilterBar({
         )}
       </div>
 
-      {/* ── Row 2: Status + Source + Date ──────────────────────────────────── */}
-      {/* Mobile: show only when expanded | Tablet/Desktop: always show */}
+      {/* ── Row 2: Status + Source + Interest + Date ─────────────────────────── */}
       {(!isMobile || expanded) && (
         <div style={{
           display: 'flex',
@@ -189,6 +188,24 @@ export default function FilterBar({
           >
             <option value="">All Sources</option>
             {SOURCES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+          </select>
+
+          {/* Lead Temperature / Interest */}
+          <select
+            style={{
+              ...inputBase,
+              width: isMobile ? '100%' : 'auto',
+              minWidth: isMobile ? undefined : 140,
+              flex: isTablet && !isMobile ? '1 1 130px' : undefined,
+              color: filters.interest === 'hot' ? '#fca5a5' : filters.interest === 'warm' ? '#fcd34d' : filters.interest === 'cold' ? '#93c5fd' : '#ffffff',
+            }}
+            value={filters.interest || ''}
+            onChange={set('interest')}
+          >
+            <option value="" style={{ color: '#ffffff' }}>All Temperatures</option>
+            <option value="hot" style={{ color: '#fca5a5' }}>🔥 Hot Leads</option>
+            <option value="warm" style={{ color: '#fcd34d' }}>🌤️ Warm Leads</option>
+            <option value="cold" style={{ color: '#93c5fd' }}>❄️ Cold Leads</option>
           </select>
 
           {/* Date range */}
@@ -239,6 +256,12 @@ export default function FilterBar({
           )}
           {filters.status && (
             <Chip label={filters.status} onRemove={() => onChange({ ...filters, status: '' })} />
+          )}
+          {filters.interest && (
+            <Chip
+              label={filters.interest === 'hot' ? '🔥 Hot' : filters.interest === 'warm' ? '🌤️ Warm' : '❄️ Cold'}
+              onRemove={() => onChange({ ...filters, interest: '' })}
+            />
           )}
           {filters.source && (
             <Chip label={filters.source} onRemove={() => onChange({ ...filters, source: '' })} />

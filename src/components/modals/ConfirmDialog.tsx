@@ -24,12 +24,12 @@ export default function ConfirmDialog({
     >
       <div style={{
         background: '#3C3C3C',
-        border: '1px solid rgba(255,255,255,.08)',
-        borderRadius: 18,
+        border: '1px solid rgba(255,255,255,0.1)',
+        borderRadius: 16,
         width: 'calc(100% - 32px)',   /* mobile pe side padding */
         maxWidth: 380,
         padding: 'clamp(16px, 4vw, 24px)',
-        boxShadow: '0 20px 60px rgba(0,0,0,.45)',
+        boxShadow: '0 20px 60px rgba(0,0,0,.5)',
         animation: 'modalIn 200ms cubic-bezier(0.16,1,0.3,1) both',
       }}>
 
@@ -37,7 +37,7 @@ export default function ConfirmDialog({
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 20 }}>
           <div style={{
             width: 38, height: 38, borderRadius: '50%', flexShrink: 0,
-            background: 'rgba(239,68,68,0.12)',
+            background: 'rgba(239,68,68,0.15)',
             border: '1px solid rgba(239,68,68,0.25)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
@@ -74,16 +74,16 @@ export default function ConfirmDialog({
             style={{
               flex: '1 1 auto', maxWidth: 140,
               padding: '9px 16px', borderRadius: 8, height: 38,
-              background: '#2a2d3e',
-              border: '1px solid rgba(255,255,255,0.12)',
-              color: '#cbd5e1',
+              background: 'rgba(255,255,255,0.06)',
+              border: '1px solid rgba(255,255,255,0.1)',
+              color: '#e2e8f0',
               fontSize: 'clamp(12px, 3vw, 13px)',
               fontWeight: 500,
               cursor: 'pointer', fontFamily: 'inherit',
               transition: 'background 0.15s',
             }}
-            onMouseEnter={e => ((e.currentTarget as HTMLElement).style.background = '#353849')}
-            onMouseLeave={e => ((e.currentTarget as HTMLElement).style.background = '#2a2d3e')}
+            onMouseEnter={e => ((e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.12)')}
+            onMouseLeave={e => ((e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.06)')}
           >
             Cancel
           </button>

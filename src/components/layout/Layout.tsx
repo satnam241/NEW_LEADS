@@ -2,17 +2,22 @@
 import {
   LayoutDashboard, FileText, Bell, BarChart2,
   LogOut, X, Menu, CalendarCheck, CalendarPlus,
-  AlertCircle, Clock, Calendar, ChevronRight,
+  AlertCircle, Clock, Calendar, ChevronRight,MessageSquare,LayoutTemplate,Flame,Send,Kanban
 } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import { API_BASE } from '@/lib/api'
 import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom'
 
 const NAV = [
-  { to: '/dashboard',  icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/leads',      icon: FileText,        label: 'Leads'      },
-  { to: '/followups',  icon: Bell,            label: 'Follow Ups' },
-  { to: '/reports',    icon: BarChart2,        label: 'Report'     },
+  { to: '/dashboard',           icon: LayoutDashboard, label: 'Dashboard'  },
+  { to: '/leads',               icon: FileText,        label: 'Leads'      },
+  { to: '/followups',           icon: Bell,            label: 'Follow Ups' },
+  { to: '/pipeline',            icon: Kanban,          label: 'Pipeline'   },
+  { to: '/reports',             icon: BarChart2,       label: 'Report'     },
+  { to: '/template',            icon: MessageSquare,   label: 'Templates'  },
+  { to: '/campaigns',           icon: Send,            label: 'Campaigns'  },
+  { to: '/LeadInterestdetails', icon: Flame,           label: 'LeadInterestdetails'  },
+  { to: '/whatsapp-connect', icon: Flame,           label: 'whatsappconnect'  },
 ]
 
 // ─── Types ─────────────────────────────────────────────────────
@@ -255,7 +260,8 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
     <div style={{
       background: '#3C3C3C',
       width: 282,
-      height: 281,
+      
+      height: 300,
       padding: '14px 10px',
       position: 'relative',
       borderRight: '1px solid rgba(255,255,255,0.06)',
@@ -276,7 +282,7 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
 
       <nav style={{
         flex: 1, display: 'flex', flexDirection: 'column',
-        padding: '12px 6px', overflow: 'hidden',
+        padding: '12px 6px', overflowY: 'auto', overflowX: 'hidden',
         margin: '20px 0 0 0', justifyContent: 'space-around',
       }}>
         {NAV.map(({ to, icon: Icon, label }) => {

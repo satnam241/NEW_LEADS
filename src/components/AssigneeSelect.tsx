@@ -31,10 +31,10 @@ export default function AssigneeSelect({ value, onChange, style, fieldName }: Pr
         onBlur={handleBlur}
         placeholder=""
         style={{
-          width: '100%', height: 38, borderRadius: 8,
-          border: '1px solid rgba(255,255,255,.12)',
+          width: '100%', height: 38, borderRadius: 9,
+          border: '1px solid rgba(255,255,255,0.1)',
           padding: '0 12px', fontSize: 13, outline: 'none',
-          boxSizing: 'border-box', background: '#2a2d3e', color: '#fff',
+          boxSizing: 'border-box', background: '#2A2A2A', color: '#fff',
           ...style,
         }}
       />

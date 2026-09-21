@@ -15,15 +15,55 @@ export default function Pagination({ page, pageSize, total, onPageChange }: Prop
   }
   
   return (
-    <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100">
-      <p className="text-xs text-slate-400">{total === 0 ? 'No results' : `Showing ${from}–${to} of ${total}`}</p>
-      <div className="flex items-center gap-1">
-        <button className="btn-secondary px-2 py-1.5 h-8 text-xs" onClick={() => onPageChange(page - 1)} disabled={page <= 1}><ChevronLeft size={13} /></button>
+    <div style={{
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      padding: '12px 18px', borderTop: '1px solid rgba(255,255,255,0.06)',
+      flexWrap: 'wrap', gap: 10,
+    }}>
+      <p style={{ fontSize: 12, color: '#94a3b8', margin: 0 }}>
+        {total === 0 ? 'No results' : `Showing ${from}–${to} of ${total}`}
+      </p>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+        <button
+          className="btn-secondary"
+          style={{ padding: '6px 10px', height: 32, fontSize: 12 }}
+          onClick={() => onPageChange(page - 1)}
+          disabled={page <= 1}
+        >
+          <ChevronLeft size={13} />
+        </button>
         {range.map((item, idx) => item === '…'
-          ? <span key={`e${idx}`} className="w-8 text-center text-xs text-slate-300">…</span>
-          : <button key={item} onClick={() => onPageChange(item as number)} className={`w-8 h-8 rounded-lg text-xs font-medium transition-colors ${item === page ? 'bg-brand-600 text-white' : 'text-slate-600 hover:bg-slate-100'}`}>{item}</button>
+          ? <span key={`e${idx}`} style={{ width: 32, textAlign: 'center', fontSize: 12, color: '#64748b' }}>…</span>
+          : (
+            <button
+              key={item}
+              onClick={() => onPageChange(item as number)}
+              style={{
+                width: 32, height: 32, borderRadius: 8, fontSize: 12, fontWeight: 600,
+                border: 'none', cursor: 'pointer',
+                background: item === page ? '#4c6ef5' : 'transparent',
+                color: item === page ? '#ffffff' : '#cbd5e1',
+                transition: 'background-color 100ms ease',
+              }}
+              onMouseEnter={e => {
+                if (item !== page) (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.08)'
+              }}
+              onMouseLeave={e => {
+                if (item !== page) (e.currentTarget as HTMLElement).style.background = 'transparent'
+              }}
+            >
+              {item}
+            </button>
+          )
         )}
-        <button className="btn-secondary px-2 py-1.5 h-8 text-xs" onClick={() => onPageChange(page + 1)} disabled={page >= pages}><ChevronRight size={13} /></button>
+        <button
+          className="btn-secondary"
+          style={{ padding: '6px 10px', height: 32, fontSize: 12 }}
+          onClick={() => onPageChange(page + 1)}
+          disabled={page >= pages}
+        >
+          <ChevronRight size={13} />
+        </button>
       </div>
     </div>
   )

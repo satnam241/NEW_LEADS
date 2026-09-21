@@ -92,7 +92,7 @@ function ClockFace({
       onPointerUp={onUp}
       style={{
         position: 'relative', width: CLOCK_SIZE, height: CLOCK_SIZE,
-        borderRadius: '50%', background: '#242424',
+        borderRadius: '50%', background: '#1E1F24',
         border: '1px solid rgba(255,255,255,.08)',
         touchAction: 'none', cursor: 'pointer', flexShrink: 0,
         userSelect: 'none',
@@ -223,22 +223,22 @@ export default function CustomDateTimePicker({ value, onChange, min, error }: Pr
         type="button"
         onClick={() => { setOpen(o => !o); setStep('calendar') }}
         style={{
-          width: '100%', height: 40, borderRadius: 8,
-          border: `1px solid ${error ? '#ef4444' : 'rgba(255,255,255,.08)'}`,
+          width: '100%', height: 40, borderRadius: 9,
+          border: `1px solid ${error ? '#ef4444' : 'rgba(255,255,255,.1)'}`,
           padding: '0 12px', fontSize: 13, textAlign: 'left',
-          background: '#2a2a2a', color: selected ? '#fff' : '#7a7a7a',
+          background: '#2A2A2A', color: selected ? '#fff' : '#64748b',
           display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer',
         }}
       >
-        <Calendar size={14} style={{ color: '#77a8ff', flexShrink: 0 }} />
+        <Calendar size={14} style={{ color: '#4c6ef5', flexShrink: 0 }} />
         {displayLabel || 'Select date & time'}
       </button>
 
       {open && (
         <div style={{
           position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 10000,
-          background: '#242424', border: '1px solid rgba(255,255,255,.1)',
-          borderRadius: 12, boxShadow: '0 16px 40px rgba(0,0,0,.5)',
+          background: '#3C3C3C', border: '1px solid rgba(255,255,255,.1)',
+          borderRadius: 16, boxShadow: '0 16px 40px rgba(0,0,0,.55)',
           width: 260, maxWidth: '92vw', overflow: 'hidden',
         }}>
 
