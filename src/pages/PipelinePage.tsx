@@ -47,12 +47,42 @@ function LeadCard({ lead, onEdit }: { lead: Lead; onEdit: (l: Lead) => void }) {
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 9 }}>
         <Avatar name={lead.name} size={28} />
         <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{
-            fontSize: 13, fontWeight: 700, color: '#ffffff',
-            margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'
-          }}>
-            {lead.name}
-          </p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+            <p style={{
+              fontSize: 13, fontWeight: 700, color: '#ffffff',
+              margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'
+            }}>
+              {lead.name}
+            </p>
+            {lead.interestLevel && (
+              <span
+                style={{
+                  fontSize: 9.5,
+                  fontWeight: 700,
+                  padding: '1px 5px',
+                  borderRadius: 4,
+                  background:
+                    lead.interestLevel.toLowerCase() === 'hot'
+                      ? 'rgba(239,68,68,0.18)'
+                      : lead.interestLevel.toLowerCase() === 'warm'
+                      ? 'rgba(245,158,11,0.18)'
+                      : 'rgba(96,165,250,0.18)',
+                  color:
+                    lead.interestLevel.toLowerCase() === 'hot'
+                      ? '#fca5a5'
+                      : lead.interestLevel.toLowerCase() === 'warm'
+                      ? '#fcd34d'
+                      : '#93c5fd',
+                }}
+              >
+                {lead.interestLevel.toLowerCase() === 'hot'
+                  ? '🔥 Hot'
+                  : lead.interestLevel.toLowerCase() === 'warm'
+                  ? '🌤️ Warm'
+                  : '❄️ Cold'}
+              </span>
+            )}
+          </div>
           <p style={{
             fontSize: 11, color: '#94a3b8', margin: '2px 0 0',
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import React, { useEffect, useState, Fragment } from 'react'
 import {
   Flame,
   ThermometerSun,
@@ -21,6 +21,7 @@ import {
 import {
   fetchLeadInterestList,
   fetchLeadInterestDetail,
+  updateLeadInterest,
   fetchBotFlow,
   createBotFlowStep,
   updateBotFlowStep,
@@ -53,6 +54,25 @@ function InterestBadge({ level }: { level: InterestLevel }) {
 }
 
 function DeliveryBadge({ status, lastMsg }: { status?: string; lastMsg?: string | null }) {
+  if (status === 'call' || status === 'manual') {
+    return (
+      <span
+        style={{
+          fontSize: 11,
+          fontWeight: 700,
+          color: '#a78bfa',
+          background: 'rgba(167,139,250,0.15)',
+          padding: '2px 8px',
+          borderRadius: 99,
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 4,
+        }}
+      >
+        📞 Call / Manual
+      </span>
+    )
+  }
   if (status === 'replied') {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -136,12 +156,18 @@ function DeliveryBadge({ status, lastMsg }: { status?: string; lastMsg?: string 
 }
 
 function leadName(row: LeadInterestRow): string {
-  if (typeof row.leadId === 'object' && row.leadId?.fullName) return row.leadId.fullName
-  return row.phone
+  if (!row) return 'Unknown'
+  const l = row.leadId as any
+  if (l && typeof l === 'object' && l.fullName) return l.fullName
+  return row.phone || 'Unknown'
 }
 
 function leadIdStr(row: LeadInterestRow): string {
-  return typeof row.leadId === 'object' ? row.leadId._id : row.leadId
+  if (!row) return ''
+  const l = row.leadId as any
+  if (l && typeof l === 'object') return l._id || l.id || row.phone || ''
+  if (l) return String(l)
+  return row.phone || ''
 }
 
 function formatDuration(seconds: number): string {
@@ -633,6 +659,18 @@ export default function LeadInterestPage() {
     }
   }
 
+  const handleInterestChange = async (leadId: string, newInterest: InterestLevel) => {
+    setRows(prev =>
+      prev.map(r => (leadIdStr(r) === leadId ? { ...r, interest: newInterest } : r))
+    )
+    try {
+      await updateLeadInterest(leadId, newInterest)
+    } catch (e: any) {
+      console.error('Failed to update interest:', e)
+      loadClassification()
+    }
+  }
+
   const activeStep = flowSteps[previewStepIdx] || flowSteps[0]
   const selectedOptionTitle = previewSelectedOpt || (activeStep?.options && activeStep.options[0]?.title) || ''
   const selectedOptionObj = activeStep?.options?.find(o => o.title === selectedOptionTitle)
@@ -760,12 +798,12 @@ export default function LeadInterestPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {rows.map(row => {
-                      const id = leadIdStr(row)
+                    {rows.map((row, idx) => {
+                      const id = leadIdStr(row) || `lead-row-${idx}`
                       const isExpanded = expandedId === id
                       return (
-                        <>
-                          <tr key={id} onClick={() => setExpandedId(isExpanded ? null : id)} style={{ cursor: 'pointer' }}>
+                        <Fragment key={id}>
+                          <tr onClick={() => setExpandedId(isExpanded ? null : id)} style={{ cursor: 'pointer' }}>
                             <td>
                               <div className="campaign-name">{leadName(row)}</div>
                               <div className="campaign-meta">{row.phone}</div>
@@ -774,25 +812,52 @@ export default function LeadInterestPage() {
                               <DeliveryBadge status={row.deliveryStatus} lastMsg={row.lastMessageFromUser} />
                             </td>
                             <td>
-                              <InterestBadge level={row.interest} />
-                              <div
-                                style={{
-                                  fontSize: 10,
-                                  fontWeight: 600,
-                                  marginTop: 4,
-                                  color:
-                                    row.interest === 'hot'
-                                      ? '#fca5a5'
-                                      : row.interest === 'warm'
-                                      ? '#fcd34d'
-                                      : '#93c5fd',
-                                }}
-                              >
-                                {row.interest === 'hot'
-                                  ? '🔥 Hot • Most Activity'
-                                  : row.interest === 'warm'
-                                  ? '🌤️ Warm • Interested'
-                                  : '❄️ Cold • No Response'}
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }} onClick={e => e.stopPropagation()}>
+                                <select
+                                  value={row.interest}
+                                  onChange={async e => {
+                                    const newInterest = e.target.value as InterestLevel
+                                    await handleInterestChange(id, newInterest)
+                                  }}
+                                  title="Change lead temperature manually"
+                                  style={{
+                                    fontSize: 11,
+                                    fontWeight: 700,
+                                    padding: '3px 8px',
+                                    borderRadius: 99,
+                                    border: `1px solid ${interestTone[row.interest]?.color || '#94a3b8'}44`,
+                                    outline: 'none',
+                                    cursor: 'pointer',
+                                    background: interestTone[row.interest]?.bg || 'rgba(255,255,255,0.06)',
+                                    color: interestTone[row.interest]?.color || '#cbd5e1',
+                                    appearance: 'none',
+                                    WebkitAppearance: 'none',
+                                    minWidth: 86,
+                                  }}
+                                >
+                                  <option value="hot" style={{ background: '#2A2A2A', color: '#fca5a5' }}>🔥 Hot</option>
+                                  <option value="warm" style={{ background: '#2A2A2A', color: '#fcd34d' }}>🌤️ Warm</option>
+                                  <option value="cold" style={{ background: '#2A2A2A', color: '#93c5fd' }}>❄️ Cold</option>
+                                </select>
+                                <div
+                                  style={{
+                                    fontSize: 10,
+                                    fontWeight: 600,
+                                    marginTop: 2,
+                                    color:
+                                      row.interest === 'hot'
+                                        ? '#fca5a5'
+                                        : row.interest === 'warm'
+                                        ? '#fcd34d'
+                                        : '#93c5fd',
+                                  }}
+                                >
+                                  {row.interest === 'hot'
+                                    ? '🔥 Hot • Most Activity'
+                                    : row.interest === 'warm'
+                                    ? '🌤️ Warm • Interested'
+                                    : '❄️ Cold • No Response'}
+                                </div>
                               </div>
                             </td>
                             <td>
@@ -812,7 +877,7 @@ export default function LeadInterestPage() {
                               </td>
                             </tr>
                           )}
-                        </>
+                        </Fragment>
                       )
                     })}
                     {rows.length === 0 && (

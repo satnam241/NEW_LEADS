@@ -21,6 +21,7 @@ interface Form {
   whatsapp: string
   source: LeadSource
   status: LeadStatus
+  interestLevel: 'hot' | 'warm' | 'cold' | ''
   note: string
   assigned_to: string
   assigned_by: string
@@ -29,6 +30,7 @@ interface Form {
 const EMPTY: Form = {
   name: '', email: '', phone: '', whatsapp: '',
   source: 'Manual', status: 'New',
+  interestLevel: '',
   note: '', assigned_to: '', assigned_by: '',
 }
 
@@ -58,15 +60,16 @@ export default function LeadModal({ lead, open, onClose, onSave, isSaving }: Pro
     if (!open) return
     if (lead) {
       setForm({
-        name:        lead.fullName ?? lead.name ?? '',
-        email:       lead.email       ?? '',
-        phone:       lead.phone       ?? '',
-        whatsapp:    lead.whatsapp    ?? '',
-        source:      (lead.source as LeadSource) ?? 'Manual',
-        status:      lead.status,
-        note:        lead.note        ?? '',
-        assigned_to: lead.assigned_to ?? '',
-        assigned_by: lead.assigned_by ?? '',
+        name:          lead.fullName ?? lead.name ?? '',
+        email:         lead.email       ?? '',
+        phone:         lead.phone       ?? '',
+        whatsapp:      lead.whatsapp    ?? '',
+        source:        (lead.source as LeadSource) ?? 'Manual',
+        status:        lead.status,
+        interestLevel: ((lead.interestLevel as any) || '').toLowerCase(),
+        note:          lead.note        ?? '',
+        assigned_to:   lead.assigned_to ?? '',
+        assigned_by:   lead.assigned_by ?? '',
       })
     } else {
       setForm(EMPTY)
@@ -92,15 +95,16 @@ export default function LeadModal({ lead, open, onClose, onSave, isSaving }: Pro
     if (Object.keys(errs).length) { setErrors(errs); return }
 
     onSave({
-      name:        form.name.trim(),
-      email:       form.email.trim()    || null,
-      phone:       form.phone.trim()    || null,
-      whatsapp:    form.whatsapp.trim() || null,
-      source:      form.source,
-      status:      form.status,
-      note:        form.note.trim()     || null,
-      assigned_to: form.assigned_to     || null,
-      assigned_by: form.assigned_by     || null,
+      name:          form.name.trim(),
+      email:         form.email.trim()    || null,
+      phone:         form.phone.trim()    || null,
+      whatsapp:      form.whatsapp.trim() || null,
+      source:        form.source,
+      status:        form.status,
+      interestLevel: form.interestLevel ? (form.interestLevel as 'hot' | 'warm' | 'cold') : null,
+      note:          form.note.trim()     || null,
+      assigned_to:   form.assigned_to     || null,
+      assigned_by:   form.assigned_by     || null,
     })
   }
 
@@ -238,6 +242,65 @@ export default function LeadModal({ lead, open, onClose, onSave, isSaving }: Pro
                   </option>
                 ))}
               </select>
+            </div>
+          </div>
+
+          {/* Lead Temperature / Interest (Hot / Warm / Cold) */}
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+              <label style={{ ...labelStyle, margin: 0 }}>Lead Interest</label>
+              {form.interestLevel && (
+                <button
+                  type="button"
+                  onClick={() => setForm(f => ({ ...f, interestLevel: '' }))}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#94a3b8',
+                    fontSize: 11,
+                    cursor: 'pointer',
+                    textDecoration: 'underline',
+                    padding: 0,
+                  }}
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+              {[
+                { val: '',     label: 'None', icon: '⚪', color: '#94a3b8', bg: 'rgba(255,255,255,0.06)' },
+                { val: 'hot',  label: 'Hot',  icon: '🔥', color: '#fca5a5', bg: 'rgba(239, 68, 68, 0.16)' },
+                { val: 'warm', label: 'Warm', icon: '🌤️', color: '#fcd34d', bg: 'rgba(245, 158, 11, 0.16)' },
+                { val: 'cold', label: 'Cold', icon: '❄️', color: '#93c5fd', bg: 'rgba(96, 165, 250, 0.16)' },
+              ].map(opt => {
+                const isSelected = form.interestLevel === opt.val
+                return (
+                  <button
+                    key={opt.val}
+                    type="button"
+                    onClick={() => setForm(f => ({ ...f, interestLevel: opt.val as any }))}
+                    style={{
+                      padding: '8px 6px',
+                      borderRadius: 8,
+                      border: isSelected ? `2px solid ${opt.color}` : '1px solid rgba(255,255,255,0.08)',
+                      background: isSelected ? opt.bg : 'rgba(255,255,255,0.03)',
+                      color: isSelected ? opt.color : '#94a3b8',
+                      fontWeight: isSelected ? 700 : 500,
+                      fontSize: 12,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 5,
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    <span>{opt.icon}</span>
+                    <span>{opt.label}</span>
+                  </button>
+                )
+              })}
             </div>
           </div>
 

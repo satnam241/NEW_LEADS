@@ -2,7 +2,7 @@
 import {
   LayoutDashboard, FileText, Bell, BarChart2,
   LogOut, X, Menu, CalendarCheck, CalendarPlus,
-  AlertCircle, Clock, Calendar, ChevronRight,MessageSquare,LayoutTemplate,Flame,Send,Kanban,Cable
+  AlertCircle, Clock, Calendar, ChevronRight,MessageSquare,LayoutTemplate,Flame,Send,Kanban,QrCode
 } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import { API_BASE } from '@/lib/api'
@@ -17,7 +17,7 @@ const NAV = [
   { to: '/template',            icon: MessageSquare,   label: 'Templates'  },
   { to: '/campaigns',           icon: Send,            label: 'Campaigns'  },
   { to: '/LeadInterestdetails', icon: Flame,           label: 'LeadInterestdetails'  },
-  { to: '/whatsapp-connect', icon: Cable,           label: 'whatsappconnect'  },
+  { to: '/whatsapp-connect',    icon: QrCode,          label: 'whatsappconnect'  },
 ]
 
 // ─── Types ─────────────────────────────────────────────────────
@@ -42,12 +42,18 @@ function useNotifications() {
     try {
       setLoading(true)
       const token = localStorage.getItem('token') ?? ''
-      const res   = await fetch(`${API_BASE}/notifications`, {
+      if (!token) return
+      let res = await fetch(`${API_BASE}/notifications`, {
         headers: { Authorization: `Bearer ${token}` },
       })
+      if (!res.ok) {
+        res = await fetch(`${API_BASE}/admin/notifications`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+      }
       if (!res.ok) return
       const data = await res.json()
-      setNotifications(data.data ?? [])
+      setNotifications(data.notifications ?? data.data ?? [])
     } catch { /* ignore */ }
     finally { setLoading(false) }
   }

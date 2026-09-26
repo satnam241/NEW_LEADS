@@ -141,6 +141,10 @@ export default function LeadsPage() {
     updateM.mutate({ id, updates: { status } })
   }
 
+  const handleInterestChange = (id: string, interestLevel: 'hot' | 'warm' | 'cold' | null) => {
+    updateM.mutate({ id, updates: { interestLevel } })
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? 16 : isTablet ? 18 : 22 }}>
       {/* Page Header matching NEW_LEADS - Copy (2) */}
@@ -336,6 +340,7 @@ export default function LeadsPage() {
           onDelete={id => setDeleteId(id)}
           onFollowUp={l => setFollowUpLead(l)}
           onStatusChange={handleStatusChange}
+          onInterestChange={handleInterestChange}
         />
 
         <div style={{

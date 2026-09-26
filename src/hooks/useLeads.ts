@@ -74,43 +74,59 @@ export function useUpdateLead() {
       api.updateLead(id, updates),
 
     onMutate: async ({ id, updates }) => {
-  await qc.cancelQueries({ queryKey: [LEADS] })
-  await qc.cancelQueries({ queryKey: [PIPELINE] })
-  await qc.cancelQueries({ queryKey: [STATS] }) // ← ADD THIS
+      await qc.cancelQueries({ queryKey: [LEADS] })
+      await qc.cancelQueries({ queryKey: [PIPELINE] })
+      await qc.cancelQueries({ queryKey: [STATS] })
 
-  const previousLeadsData = qc.getQueriesData<{ data: Lead[]; count: number }>({ queryKey: [LEADS] })
-  const previousPipeline  = qc.getQueryData<Lead[]>([PIPELINE])
-  const previousStats     = qc.getQueryData<LeadStats>([STATS]) // ← ADD THIS
+      const previousLeadsData = qc.getQueriesData<{ data: Lead[]; count: number }>({ queryKey: [LEADS] })
+      const previousPipeline  = qc.getQueryData<Lead[]>([PIPELINE])
+      const previousStats     = qc.getQueryData<LeadStats>([STATS])
 
-  
-  if (previousStats && updates.status) {
-    // Find old status from the leads cache
-    let oldStatus: string | undefined
-    for (const [, cacheData] of previousLeadsData) {
-      const found = cacheData?.data?.find(l => l.id === id || l._id === id)
-      if (found) { oldStatus = found.status; break }
-    }
-
-    if (oldStatus && oldStatus !== updates.status) {
-      const normalize = (s: string) =>
-        s.charAt(0).toUpperCase() + s.slice(1).toLowerCase()
-
-      const oldKey = normalize(oldStatus)   // e.g. "contacted" → "Contacted"
-      const newKey = normalize(updates.status)
-
-      qc.setQueryData<LeadStats>([STATS], {
-        ...previousStats,
-        byStatus: {
-          ...previousStats.byStatus,
-          [oldKey]: Math.max(0, (previousStats.byStatus[oldKey] ?? 0) - 1),
-          [newKey]: (previousStats.byStatus[newKey] ?? 0) + 1,
-        },
+      // Optimistically update LEADS cache so table updates instantly
+      qc.setQueriesData<{ data: Lead[]; count: number }>({ queryKey: [LEADS] }, (old) => {
+        if (!old?.data) return old
+        return {
+          ...old,
+          data: old.data.map(l => (l.id === id || l._id === id ? { ...l, ...updates } : l)),
+        }
       })
-    }
-  }
 
-  return { previousLeadsData, previousPipeline, previousStats }
-},
+      // Optimistically update PIPELINE cache
+      if (previousPipeline) {
+        qc.setQueryData<Lead[]>([PIPELINE], (old) => {
+          if (!old) return old
+          return old.map(l => (l.id === id || l._id === id ? { ...l, ...updates } : l))
+        })
+      }
+
+      if (previousStats && updates.status) {
+        // Find old status from the leads cache
+        let oldStatus: string | undefined
+        for (const [, cacheData] of previousLeadsData) {
+          const found = cacheData?.data?.find(l => l.id === id || l._id === id)
+          if (found) { oldStatus = found.status; break }
+        }
+
+        if (oldStatus && oldStatus !== updates.status) {
+          const normalize = (s: string) =>
+            s.charAt(0).toUpperCase() + s.slice(1).toLowerCase()
+
+          const oldKey = normalize(oldStatus)   // e.g. "contacted" → "Contacted"
+          const newKey = normalize(updates.status)
+
+          qc.setQueryData<LeadStats>([STATS], {
+            ...previousStats,
+            byStatus: {
+              ...previousStats.byStatus,
+              [oldKey]: Math.max(0, (previousStats.byStatus[oldKey] ?? 0) - 1),
+              [newKey]: (previousStats.byStatus[newKey] ?? 0) + 1,
+            },
+          })
+        }
+      }
+
+      return { previousLeadsData, previousPipeline, previousStats }
+    },
 
 // Rollback stats too on error
 onError: (e: Error, _, context) => {

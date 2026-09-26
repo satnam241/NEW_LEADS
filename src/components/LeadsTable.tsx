@@ -11,6 +11,7 @@ interface Props {
   onDelete: (id: string) => void
   onFollowUp?: (l: Lead) => void
   onStatusChange?: (id: string, status: LeadStatus) => void
+  onInterestChange?: (id: string, interest: 'hot' | 'warm' | 'cold' | null) => void
 }
 
 const STATUSES: LeadStatus[] = ['New', 'Contacted', 'Interested', 'Negotiation', 'Visitor', 'Closed', 'Lost']
@@ -62,6 +63,63 @@ const StatusSelect = React.memo(function StatusSelect({
           color: STATUS_COLORS[s]?.color ?? '#fff',
         }}>
           {s}
+        </option>
+      ))}
+    </select>
+  )
+})
+
+// ── Lead Temperature / Interest dropdown ─────────────────────────────────────
+const INTEREST_OPTIONS: { value: 'hot' | 'warm' | 'cold' | ''; label: string; bg: string; color: string }[] = [
+  { value: '',     label: '🌡️ Interest: None', bg: 'rgba(255,255,255,0.06)', color: '#94a3b8' },
+  { value: 'hot',  label: '🔥 Hot',             bg: 'rgba(239, 68, 68, 0.16)', color: '#fca5a5' },
+  { value: 'warm', label: '🌤️ Warm',            bg: 'rgba(245, 158, 11, 0.16)', color: '#fcd34d' },
+  { value: 'cold', label: '❄️ Cold',            bg: 'rgba(96, 165, 250, 0.16)', color: '#93c5fd' },
+]
+
+const InterestSelect = React.memo(function InterestSelect({
+  lead, onChange,
+}: { lead: Lead; onChange?: (id: string, interest: 'hot' | 'warm' | 'cold' | null) => void }) {
+  const current = (lead.interestLevel || '').toLowerCase() as 'hot' | 'warm' | 'cold' | ''
+  const [localInterest, setLocalInterest] = useState<string>(current)
+
+  React.useEffect(() => {
+    setLocalInterest((lead.interestLevel || '').toLowerCase())
+  }, [lead.interestLevel])
+
+  const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    e.stopPropagation()
+    const next = e.target.value as 'hot' | 'warm' | 'cold' | ''
+    setLocalInterest(next)
+    onChange?.(lead._id ?? lead.id, next ? next : null)
+  }
+
+  const opt = INTEREST_OPTIONS.find(o => o.value === localInterest) || INTEREST_OPTIONS[0]
+
+  return (
+    <select
+      value={localInterest}
+      onClick={e => e.stopPropagation()}
+      onChange={handleChange}
+      title="Manually update Lead Temperature (Hot / Warm / Cold)"
+      style={{
+        fontSize: 10.5,
+        fontWeight: 700,
+        padding: '3px 8px',
+        borderRadius: 99,
+        border: `1px solid ${opt.color}44`,
+        outline: 'none',
+        cursor: 'pointer',
+        background: opt.bg,
+        color: opt.color,
+        appearance: 'none',
+        WebkitAppearance: 'none',
+        minWidth: 104,
+      }}
+    >
+      {INTEREST_OPTIONS.map(o => (
+        <option key={o.value} value={o.value} style={{ background: '#2A2A2A', color: o.color }}>
+          {o.label}
         </option>
       ))}
     </select>
@@ -129,7 +187,7 @@ const SkeletonRow = () => (
 )
 
 // ── Main component ────────────────────────────────────────────────────────────
-function LeadsTable({ leads, isLoading, onEdit, onDelete, onFollowUp, onStatusChange }: Props) {
+function LeadsTable({ leads, isLoading, onEdit, onDelete, onFollowUp, onStatusChange, onInterestChange }: Props) {
   if (!isLoading && leads.length === 0) {
     return (
       <div style={{ padding: '60px 16px', textAlign: 'center', background: '#3C3C3C' }}>
@@ -259,9 +317,12 @@ function LeadsTable({ leads, isLoading, onEdit, onDelete, onFollowUp, onStatusCh
                         <SourceBadge source={lead.source} />
                       </td>
 
-                      {/* Status */}
+                      {/* Status & Lead Temperature */}
                       <td className="tbody-cell">
-                        <StatusSelect lead={lead} onChange={onStatusChange} />
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                          <StatusSelect lead={lead} onChange={onStatusChange} />
+                          <InterestSelect lead={lead} onChange={onInterestChange} />
+                        </div>
                       </td>
 
                       {/* Follow-up date */}

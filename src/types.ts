@@ -3,6 +3,8 @@ export type LeadStatus = 'New' | 'Contacted' | 'Interested' | 'Negotiation' | 'V
 
 export type LeadSource = 'facebook' | 'whatsapp' | 'Manual' | 'Imported' | 'Meta Ads'
 
+export type InterestLevel = 'hot' | 'warm' | 'cold' | null
+
 export type FollowUpRecurrence = 'once' | 'tomorrow' | '3days' | 'weekly'
 
 export type MessageType = 'email' | 'whatsapp' | 'both'
@@ -32,6 +34,7 @@ export interface Lead {
 
   source: LeadSource
   status: LeadStatus
+  interestLevel?: InterestLevel
 
   note: string | null   // mapped from message
   message?: string      // raw from backend
@@ -65,6 +68,7 @@ export type LeadInsert = {
   whatsapp?: string | null
   source: LeadSource
   status: LeadStatus
+  interestLevel?: InterestLevel
   note?: string | null
   assigned_to?: string | null
   assigned_by?: string | null
@@ -83,6 +87,7 @@ export interface LeadFilters {
   search: string
   status: LeadStatus | ''
   source: LeadSource | ''
+  interest?: 'hot' | 'warm' | 'cold' | ''
   dateFrom: string
   dateTo: string
 }
