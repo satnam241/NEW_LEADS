@@ -196,3 +196,91 @@ export interface Assignee {
   _id: string
   name: string
 }
+
+// ── Project Knowledge Base Types ─────────────────────────────────────────────
+export interface UnitType {
+  type: string
+  sizeSqft: string
+  priceFrom: string
+}
+
+export interface ProjectFAQ {
+  question: string
+  answer: string
+  keywords: string[]
+}
+
+export interface Project {
+  _id: string
+  name: string
+  slug: string
+  keywords: string[]
+  summary: string
+  location: string
+  developer: string
+  priceRange: string
+  unitTypes: UnitType[]
+  amenities: string[]
+  possession: string
+  reraNumber: string
+  paymentPlan: string
+  siteVisitInfo: string
+  currentOffers: string
+  doNotSay: string[]
+  faqs: ProjectFAQ[]
+  welcomeMessage?: string
+  isActive: boolean
+  createdAt?: string
+  updatedAt?: string
+}
+
+// ── Facebook Form Types ───────────────────────────────────────────────────────
+export interface FbForm {
+  _id: string
+  formId: string
+  name: string
+  locale: string
+  status: string
+  projectId: Project | { _id: string; name: string; slug: string } | string | null
+  suggestedProject: string | null
+  lastSyncedAt?: string
+  leadCount: number
+  createdAt?: string
+  updatedAt?: string
+}
+
+// ── Conversation Transcript Types ────────────────────────────────────────────
+export interface ConversationMessage {
+  _id?: string
+  leadId: string
+  phone: string
+  role: 'user' | 'assistant'
+  content: string
+  createdAt: string
+}
+
+export interface AiHealthResponse {
+  success: boolean
+  online: boolean
+  queueLength: number
+  message: string
+  model?: string
+  baseUrl?: string
+}
+
+// ── AI Auto-Learning & Discovered Questions Types ────────────────────────────
+export interface LearnedQuestion {
+  _id: string
+  projectId: { _id: string; name: string; slug: string; location?: string } | string
+  question: string
+  normalizedQuestion: string
+  occurrences: number
+  leadIds?: string[]
+  exampleUserQueries: string[]
+  suggestedAnswer?: string
+  status: 'pending' | 'approved' | 'rejected'
+  approvedAnswer?: string
+  approvedAt?: string
+  createdAt?: string
+  updatedAt?: string
+}

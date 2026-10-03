@@ -17,6 +17,12 @@ import {
   X,
   Phone,
   Bot,
+  Building2,
+  Play,
+  Clock,
+  Search,
+  FileText,
+  ExternalLink,
 } from 'lucide-react'
 import {
   fetchLeadInterestList,
@@ -26,12 +32,15 @@ import {
   createBotFlowStep,
   updateBotFlowStep,
   deleteBotFlowStep,
+  fetchLeadMessages,
+  resumeLeadAi,
   type LeadInterestRow,
   type LeadInterestDetail,
   type InterestLevel,
   type BotFlowStep,
   type FlowOption,
 } from '../lib/api'
+import type { ConversationMessage } from '../types'
 
 const interestTone: Record<
   InterestLevel,
@@ -179,26 +188,45 @@ function formatDuration(seconds: number): string {
 
 function ExpandedTimeline({ leadId }: { leadId: string }) {
   const [detail, setDetail] = useState<LeadInterestDetail | null>(null)
+  const [messages, setMessages] = useState<ConversationMessage[]>([])
   const [loading, setLoading] = useState(true)
+  const [resuming, setResuming] = useState(false)
   const [error, setError] = useState('')
 
-  useEffect(() => {
-    let cancelled = false
+  async function loadDetailAndMessages() {
     setLoading(true)
-    fetchLeadInterestDetail(leadId)
-      .then(d => {
-        if (!cancelled) setDetail(d)
-      })
-      .catch(err => {
-        if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load')
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false)
-      })
-    return () => {
-      cancelled = true
+    setError('')
+    try {
+      const [d, msgs] = await Promise.all([
+        fetchLeadInterestDetail(leadId),
+        fetchLeadMessages(leadId).catch(() => []),
+      ])
+      setDetail(d)
+      setMessages(msgs)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load details')
+    } finally {
+      setLoading(false)
     }
+  }
+
+  useEffect(() => {
+    loadDetailAndMessages()
   }, [leadId])
+
+  async function handleResumeAi() {
+    setResuming(true)
+    try {
+      await resumeLeadAi(leadId)
+      if (detail) {
+        setDetail({ ...detail, aiPaused: false, needsAgent: false })
+      }
+    } catch (err: any) {
+      alert(err?.message || 'Failed to resume AI')
+    } finally {
+      setResuming(false)
+    }
+  }
 
   if (loading)
     return (
@@ -209,35 +237,248 @@ function ExpandedTimeline({ leadId }: { leadId: string }) {
   if (error) return <div className="campaign-empty">{error}</div>
   if (!detail) return null
 
+  // Resolve project name from activeProjectId or lead.projectId
+  const activeProj = detail.activeProjectId
+  const leadDoc = typeof detail.leadId === 'object' ? (detail.leadId as any) : null
+  const projectName = activeProj?.name || leadDoc?.projectId?.name || null
+
   return (
-    <div className="campaign-recipient-box">
-      <div className="campaign-recipient-head">
-        Conversation timeline — {detail.answers.length}/{detail.totalSteps} steps answered
-      </div>
-      {detail.answers.length === 0 && <div className="campaign-empty">No answers yet.</div>}
-      {detail.answers.map((a, i) => (
-        <div
-          key={i}
-          className="campaign-recipient-row"
-          style={{
-            borderBottom:
-              i < detail.answers.length - 1 ? '1px solid rgba(255,255,255,.06)' : undefined,
-          }}
-        >
-          <div>
-            <strong>{a.step.replace('step_', 'Step ').replace('_', ' ')}</strong>
-            <span>{new Date(a.answeredAt).toLocaleString('en-IN')}</span>
-          </div>
-          <span style={{ color: '#86efac', fontWeight: 600 }}>{a.optionTitle}</span>
+    <div className="campaign-recipient-box" style={{ padding: 16 }}>
+      {/* ── Top Bar: Project & Agent Handoff Controls ── */}
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: 10,
+          marginBottom: 14,
+          paddingBottom: 10,
+          borderBottom: '1px solid rgba(255,255,255,0.08)',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
+          {projectName ? (
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 5,
+                background: 'rgba(59,130,246,0.15)',
+                color: '#60a5fa',
+                padding: '4px 10px',
+                borderRadius: 8,
+                fontSize: 12,
+                fontWeight: 600,
+              }}
+            >
+              <Building2 size={14} /> Project: {projectName}
+            </span>
+          ) : (
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 5,
+                background: 'rgba(148,163,184,0.12)',
+                color: '#94a3b8',
+                padding: '4px 10px',
+                borderRadius: 8,
+                fontSize: 12,
+              }}
+            >
+              <Building2 size={14} /> Unassigned Project
+            </span>
+          )}
+
+          {/* Form Name Badge */}
+          <span
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 5,
+              background: 'rgba(16,185,129,0.15)',
+              color: '#6ee7b7',
+              padding: '4px 10px',
+              borderRadius: 8,
+              fontSize: 12,
+              fontWeight: 600,
+            }}
+          >
+            <FileText size={13} /> Form: {detail.formName || leadDoc?.formName || 'Direct WhatsApp'}
+          </span>
+
+          {/* Mobile Number Badge */}
+          <span
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 5,
+              background: 'rgba(255,255,255,0.08)',
+              color: '#f8fafc',
+              padding: '4px 10px',
+              borderRadius: 8,
+              fontSize: 12,
+              fontWeight: 600,
+              fontFamily: 'monospace',
+            }}
+          >
+            <Phone size={13} style={{ color: '#10b981' }} /> {detail.phone || leadDoc?.phone || 'N/A'}
+          </span>
+
+          {/* WhatsApp Direct Chat */}
+          {(detail.phone || leadDoc?.phone) && (
+            <a
+              href={`https://wa.me/${(detail.phone || leadDoc?.phone).replace(/[^0-9]/g, '')}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 5,
+                padding: '4px 10px',
+                borderRadius: 8,
+                background: 'rgba(37,211,102,0.15)',
+                color: '#25d366',
+                fontSize: 12,
+                fontWeight: 600,
+                textDecoration: 'none',
+              }}
+            >
+              <MessageSquare size={13} /> Chat on WhatsApp
+            </a>
+          )}
+
+          {/* Follow-up Due Badge */}
+          {detail.isFollowUpDue && (
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 5,
+                background: 'rgba(192,132,252,0.18)',
+                color: '#c084fc',
+                padding: '4px 10px',
+                borderRadius: 8,
+                fontSize: 12,
+                fontWeight: 700,
+                border: '1px solid rgba(192,132,252,0.3)',
+              }}
+            >
+              <Clock size={13} /> Follow-up Due Now
+            </span>
+          )}
+
+          {/* Needs Agent Badge */}
+          {(detail.needsAgent || detail.aiPaused) && (
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 5,
+                background: 'rgba(239,68,68,0.18)',
+                color: '#fca5a5',
+                padding: '4px 10px',
+                borderRadius: 8,
+                fontSize: 12,
+                fontWeight: 700,
+                border: '1px solid rgba(239,68,68,0.3)',
+              }}
+            >
+              ⚠️ Needs Human Agent / Callback
+            </span>
+          )}
         </div>
-      ))}
-      {detail.currentStep === 'completed' && detail.completedAt && (
-        <div className="campaign-recipient-row">
-          <div>
-            <strong>Completed Flow</strong>
-            <span>{new Date(detail.completedAt).toLocaleString('en-IN')}</span>
+
+        {/* Resume AI Button */}
+        {(detail.needsAgent || detail.aiPaused) && (
+          <button
+            className="btn-primary"
+            style={{ padding: '6px 12px', fontSize: 12, background: 'linear-gradient(135deg,#059669,#10b981)' }}
+            onClick={handleResumeAi}
+            disabled={resuming}
+          >
+            <Play size={13} /> {resuming ? 'Resuming...' : 'Resume AI'}
+          </button>
+        )}
+      </div>
+
+      {/* ── WhatsApp Chat Transcript ── */}
+      <div style={{ marginBottom: 16 }}>
+        <div style={{ fontSize: 12, fontWeight: 700, color: '#94a3b8', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <MessageSquare size={14} /> WhatsApp Chat Transcript ({messages.length})
+        </div>
+
+        {messages.length === 0 ? (
+          <div style={{ fontSize: 12, color: '#64748b', fontStyle: 'italic', padding: '10px 0' }}>
+            No WhatsApp messages logged yet.
           </div>
-          <span style={{ color: '#86efac', fontWeight: 600 }}>All questions answered 🔥</span>
+        ) : (
+          <div
+            style={{
+              maxHeight: 280,
+              overflowY: 'auto',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 8,
+              padding: 10,
+              background: 'rgba(0,0,0,0.25)',
+              borderRadius: 10,
+              border: '1px solid rgba(255,255,255,0.05)',
+            }}
+          >
+            {messages.map((m, idx) => {
+              const isUser = m.role === 'user'
+              return (
+                <div
+                  key={idx}
+                  style={{
+                    alignSelf: isUser ? 'flex-end' : 'flex-start',
+                    maxWidth: '85%',
+                    background: isUser ? '#1e3a5f' : '#223326',
+                    border: `1px solid ${isUser ? 'rgba(59,130,246,0.3)' : 'rgba(34,197,94,0.3)'}`,
+                    borderRadius: 10,
+                    padding: '8px 12px',
+                    fontSize: 12.5,
+                    lineHeight: 1.4,
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 14, fontSize: 10.5, color: isUser ? '#93c5fd' : '#86efac', marginBottom: 4, fontWeight: 600 }}>
+                    <span>{isUser ? '👤 Lead' : '🤖 AI Assistant'}</span>
+                    <span>{new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                  </div>
+                  <div style={{ color: '#fff', whiteSpace: 'pre-wrap' }}>{m.content}</div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* ── Questionnaire Steps (if applicable) ── */}
+      {detail.answers && detail.answers.length > 0 && (
+        <div>
+          <div style={{ fontSize: 12, fontWeight: 700, color: '#94a3b8', marginBottom: 8 }}>
+            Bot Flow Questions Answered ({detail.answers.length}/{detail.totalSteps})
+          </div>
+          {detail.answers.map((a, i) => (
+            <div
+              key={i}
+              className="campaign-recipient-row"
+              style={{
+                borderBottom: i < detail.answers.length - 1 ? '1px solid rgba(255,255,255,.06)' : undefined,
+                padding: '6px 0',
+              }}
+            >
+              <div>
+                <strong>{a.step.replace('step_', 'Step ').replace('_', ' ')}</strong>
+                <span style={{ fontSize: 11, color: '#94a3b8', marginLeft: 8 }}>
+                  {new Date(a.answeredAt).toLocaleString('en-IN')}
+                </span>
+              </div>
+              <span style={{ color: '#86efac', fontWeight: 600 }}>{a.optionTitle}</span>
+            </div>
+          ))}
         </div>
       )}
     </div>
@@ -620,9 +861,32 @@ export default function LeadInterestPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, sortBy])
 
+  const [filterCategory, setFilterCategory] = useState<'all' | 'hot' | 'warm' | 'cold' | 'due_followup'>('all')
+  const [searchQuery, setSearchQuery] = useState('')
+
   const hotCount = rows.filter(r => r.interest === 'hot').length
   const warmCount = rows.filter(r => r.interest === 'warm').length
   const coldCount = rows.filter(r => r.interest === 'cold').length
+  const dueFollowUpCount = rows.filter(r => r.isFollowUpDue).length
+
+  const filteredRows = rows.filter(row => {
+    if (filterCategory === 'hot' && row.interest !== 'hot') return false
+    if (filterCategory === 'warm' && row.interest !== 'warm') return false
+    if (filterCategory === 'cold' && row.interest !== 'cold') return false
+    if (filterCategory === 'due_followup' && !row.isFollowUpDue) return false
+
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim()
+      const name = leadName(row).toLowerCase()
+      const phone = (row.phone || '').toLowerCase()
+      const form = (row.formName || '').toLowerCase()
+      const proj = (row.projectName || '').toLowerCase()
+      if (!name.includes(q) && !phone.includes(q) && !form.includes(q) && !proj.includes(q)) {
+        return false
+      }
+    }
+    return true
+  })
 
   const handleSaveStep = async (stepData: { question: string; options: FlowOption[]; isActive: boolean }) => {
     if (editingStep) {
@@ -737,8 +1001,37 @@ export default function LeadInterestPage() {
             </div>
           )}
 
-          <div className="campaign-stats-grid">
-            <div className="campaign-stat-card">
+          <div className="campaign-stats-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))' }}>
+            {/* All Leads Card */}
+            <div
+              className="campaign-stat-card"
+              onClick={() => setFilterCategory('all')}
+              style={{
+                cursor: 'pointer',
+                border: filterCategory === 'all' ? '2px solid #3b82f6' : '1px solid rgba(255,255,255,0.08)',
+                boxShadow: filterCategory === 'all' ? '0 0 16px rgba(59,130,246,0.3)' : undefined,
+              }}
+            >
+              <div className="campaign-stat-top">
+                <span>Total Leads</span>
+                <span className="campaign-icon-box" style={{ color: '#3b82f6' }}>
+                  <Bot size={16} />
+                </span>
+              </div>
+              <div className="campaign-stat-value">{rows.length}</div>
+              <div className="campaign-stat-note">All active inquiries & conversations</div>
+            </div>
+
+            {/* Hot Leads Card */}
+            <div
+              className="campaign-stat-card"
+              onClick={() => setFilterCategory('hot')}
+              style={{
+                cursor: 'pointer',
+                border: filterCategory === 'hot' ? '2px solid #ef4444' : '1px solid rgba(255,255,255,0.08)',
+                boxShadow: filterCategory === 'hot' ? '0 0 16px rgba(239,68,68,0.3)' : undefined,
+              }}
+            >
               <div className="campaign-stat-top">
                 <span>Hot Leads</span>
                 <span className="campaign-icon-box" style={{ color: '#ef4444' }}>
@@ -746,9 +1039,19 @@ export default function LeadInterestPage() {
                 </span>
               </div>
               <div className="campaign-stat-value">{hotCount}</div>
-              <div className="campaign-stat-note">2+ replies / completed questionnaire 🔥</div>
+              <div className="campaign-stat-note">Chatting with AI + viewed template 🔥</div>
             </div>
-            <div className="campaign-stat-card">
+
+            {/* Warm Leads Card */}
+            <div
+              className="campaign-stat-card"
+              onClick={() => setFilterCategory('warm')}
+              style={{
+                cursor: 'pointer',
+                border: filterCategory === 'warm' ? '2px solid #f59e0b' : '1px solid rgba(255,255,255,0.08)',
+                boxShadow: filterCategory === 'warm' ? '0 0 16px rgba(245,158,11,0.3)' : undefined,
+              }}
+            >
               <div className="campaign-stat-top">
                 <span>Warm Leads</span>
                 <span className="campaign-icon-box" style={{ color: '#f59e0b' }}>
@@ -756,9 +1059,19 @@ export default function LeadInterestPage() {
                 </span>
               </div>
               <div className="campaign-stat-value">{warmCount}</div>
-              <div className="campaign-stat-note">Replied to 1 question 🌤️</div>
+              <div className="campaign-stat-note">Initial inquiries & 1 reply 🌤️</div>
             </div>
-            <div className="campaign-stat-card">
+
+            {/* Cold Leads Card */}
+            <div
+              className="campaign-stat-card"
+              onClick={() => setFilterCategory('cold')}
+              style={{
+                cursor: 'pointer',
+                border: filterCategory === 'cold' ? '2px solid #60a5fa' : '1px solid rgba(255,255,255,0.08)',
+                boxShadow: filterCategory === 'cold' ? '0 0 16px rgba(96,165,250,0.3)' : undefined,
+              }}
+            >
               <div className="campaign-stat-top">
                 <span>Cold Leads</span>
                 <span className="campaign-icon-box" style={{ color: '#60a5fa' }}>
@@ -766,19 +1079,136 @@ export default function LeadInterestPage() {
                 </span>
               </div>
               <div className="campaign-stat-value">{coldCount}</div>
-              <div className="campaign-stat-note">Read message, 0 replies / ignored ❄️</div>
+              <div className="campaign-stat-note">Read template, 0 replies (Send Offers) ❄️</div>
+            </div>
+
+            {/* Due Follow-up Card */}
+            <div
+              className="campaign-stat-card"
+              onClick={() => setFilterCategory('due_followup')}
+              style={{
+                cursor: 'pointer',
+                border: filterCategory === 'due_followup' ? '2px solid #c084fc' : '1px solid rgba(255,255,255,0.08)',
+                boxShadow: filterCategory === 'due_followup' ? '0 0 16px rgba(192,132,252,0.3)' : undefined,
+              }}
+            >
+              <div className="campaign-stat-top">
+                <span>Due Follow-ups</span>
+                <span className="campaign-icon-box" style={{ color: '#c084fc' }}>
+                  <Clock size={16} />
+                </span>
+              </div>
+              <div className="campaign-stat-value">{dueFollowUpCount}</div>
+              <div className="campaign-stat-note">Schedule reached — follow-up due! ⏰</div>
             </div>
           </div>
 
           <section className="campaign-table-card">
-            <div className="campaign-toolbar">
+            <div className="campaign-toolbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+              {/* Search Box */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#2A2A2A', padding: '7px 12px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.08)', flex: '1 1 260px', maxWidth: 360 }}>
+                <Search size={14} style={{ color: '#94a3b8', flexShrink: 0 }} />
+                <input
+                  type="text"
+                  placeholder="Search lead name, phone, form..."
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: 13, outline: 'none', width: '100%' }}
+                />
+                {searchQuery && (
+                  <button onClick={() => setSearchQuery('')} style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: 0 }}>
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+
+              {/* Filter Pills */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                <button
+                  onClick={() => setFilterCategory('all')}
+                  style={{
+                    padding: '5px 12px',
+                    borderRadius: 99,
+                    border: 'none',
+                    fontSize: 12,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    background: filterCategory === 'all' ? '#3b82f6' : '#2A2A2A',
+                    color: filterCategory === 'all' ? '#fff' : '#94a3b8',
+                  }}
+                >
+                  All ({rows.length})
+                </button>
+                <button
+                  onClick={() => setFilterCategory('hot')}
+                  style={{
+                    padding: '5px 12px',
+                    borderRadius: 99,
+                    border: 'none',
+                    fontSize: 12,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    background: filterCategory === 'hot' ? 'rgba(239,68,68,0.25)' : '#2A2A2A',
+                    color: filterCategory === 'hot' ? '#fca5a5' : '#94a3b8',
+                  }}
+                >
+                  🔥 Hot ({hotCount})
+                </button>
+                <button
+                  onClick={() => setFilterCategory('warm')}
+                  style={{
+                    padding: '5px 12px',
+                    borderRadius: 99,
+                    border: 'none',
+                    fontSize: 12,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    background: filterCategory === 'warm' ? 'rgba(245,158,11,0.25)' : '#2A2A2A',
+                    color: filterCategory === 'warm' ? '#fcd34d' : '#94a3b8',
+                  }}
+                >
+                  🌤️ Warm ({warmCount})
+                </button>
+                <button
+                  onClick={() => setFilterCategory('cold')}
+                  style={{
+                    padding: '5px 12px',
+                    borderRadius: 99,
+                    border: 'none',
+                    fontSize: 12,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    background: filterCategory === 'cold' ? 'rgba(96,165,250,0.25)' : '#2A2A2A',
+                    color: filterCategory === 'cold' ? '#93c5fd' : '#94a3b8',
+                  }}
+                >
+                  ❄️ Cold ({coldCount})
+                </button>
+                <button
+                  onClick={() => setFilterCategory('due_followup')}
+                  style={{
+                    padding: '5px 12px',
+                    borderRadius: 99,
+                    border: 'none',
+                    fontSize: 12,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    background: filterCategory === 'due_followup' ? 'rgba(192,132,252,0.25)' : '#2A2A2A',
+                    color: filterCategory === 'due_followup' ? '#c084fc' : '#94a3b8',
+                  }}
+                >
+                  ⏰ Due Follow-up ({dueFollowUpCount})
+                </button>
+              </div>
+
+              {/* Sort Dropdown */}
               <select
                 className="campaign-control"
                 value={sortBy}
                 onChange={e => setSortBy(e.target.value as typeof sortBy)}
-                style={{ width: 220 }}
+                style={{ width: 200 }}
               >
-                <option value="interest">Sort by interest (Hot leads first)</option>
+                <option value="interest">Sort by interest (Hot first)</option>
                 <option value="recent">Sort by most recent activity</option>
               </select>
             </div>
@@ -792,25 +1222,116 @@ export default function LeadInterestPage() {
                 <table className="campaign-table">
                   <thead>
                     <tr>
-                      {['Lead', 'Status', 'Interest', 'Progress', 'Replies', 'Engaged For', 'Last Active', ''].map((h, i) => (
+                      {['Lead Name', 'Mobile Number', 'Source Form', 'Project', 'Status', 'Interest / Category', 'Replies', 'Last Active', ''].map((h, i) => (
                         <th key={i}>{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
-                    {rows.map((row, idx) => {
+                    {filteredRows.map((row, idx) => {
                       const id = leadIdStr(row) || `lead-row-${idx}`
                       const isExpanded = expandedId === id
                       return (
                         <Fragment key={id}>
                           <tr onClick={() => setExpandedId(isExpanded ? null : id)} style={{ cursor: 'pointer' }}>
+                            {/* 1. Lead Name */}
                             <td>
-                              <div className="campaign-name">{leadName(row)}</div>
-                              <div className="campaign-meta">{row.phone}</div>
+                              <div className="campaign-name" style={{ fontWeight: 700, color: '#f8fafc' }}>
+                                {leadName(row)}
+                              </div>
+                              {row.isFollowUpDue && (
+                                <span style={{ fontSize: 10, color: '#c084fc', background: 'rgba(192,132,252,0.15)', padding: '2px 6px', borderRadius: 4, display: 'inline-flex', alignItems: 'center', gap: 3, marginTop: 3 }}>
+                                  <Clock size={10} /> Follow-up Due
+                                </span>
+                              )}
                             </td>
+
+                            {/* 2. Mobile Number */}
+                            <td>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <Phone size={13} style={{ color: '#10b981', flexShrink: 0 }} />
+                                <span style={{ fontFamily: 'monospace', fontSize: 12.5, fontWeight: 600, color: '#f8fafc' }}>
+                                  {row.phone || 'N/A'}
+                                </span>
+                                {row.phone && (
+                                  <a
+                                    href={`https://wa.me/${row.phone.replace(/[^0-9]/g, '')}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    onClick={e => e.stopPropagation()}
+                                    title="Open WhatsApp chat"
+                                    style={{
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      padding: '2px 6px',
+                                      borderRadius: 4,
+                                      background: 'rgba(37,211,102,0.15)',
+                                      color: '#25d366',
+                                      fontSize: 10.5,
+                                      fontWeight: 600,
+                                      textDecoration: 'none',
+                                    }}
+                                  >
+                                    WhatsApp
+                                  </a>
+                                )}
+                              </div>
+                            </td>
+
+                            {/* 3. Source Form */}
+                            <td>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                <span
+                                  style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: 4,
+                                    background: 'rgba(59,130,246,0.12)',
+                                    color: '#93c5fd',
+                                    padding: '3px 8px',
+                                    borderRadius: 6,
+                                    fontSize: 11.5,
+                                    fontWeight: 600,
+                                    width: 'fit-content',
+                                  }}
+                                >
+                                  <FileText size={11} /> {row.formName || 'Direct WhatsApp'}
+                                </span>
+                                {row.source && row.source !== 'whatsapp' && row.source !== 'WhatsApp' && (
+                                  <span style={{ fontSize: 10, color: '#94a3b8' }}>Source: {row.source}</span>
+                                )}
+                              </div>
+                            </td>
+
+                            {/* 4. Project */}
+                            <td>
+                              {row.projectName ? (
+                                <span
+                                  style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: 4,
+                                    background: 'rgba(16,185,129,0.12)',
+                                    color: '#6ee7b7',
+                                    padding: '3px 8px',
+                                    borderRadius: 6,
+                                    fontSize: 11.5,
+                                    fontWeight: 600,
+                                  }}
+                                >
+                                  <Building2 size={12} /> {row.projectName}
+                                </span>
+                              ) : (
+                                <span style={{ fontSize: 11, color: '#64748b' }}>Unassigned</span>
+                              )}
+                            </td>
+
+                            {/* 5. Status */}
                             <td>
                               <DeliveryBadge status={row.deliveryStatus} lastMsg={row.lastMessageFromUser} />
                             </td>
+
+                            {/* 6. Interest / Category */}
                             <td>
                               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }} onClick={e => e.stopPropagation()}>
                                 <select
@@ -853,26 +1374,29 @@ export default function LeadInterestPage() {
                                   }}
                                 >
                                   {row.interest === 'hot'
-                                    ? '🔥 Hot • Most Activity'
+                                    ? '🔥 Hot • Chatting with AI'
                                     : row.interest === 'warm'
-                                    ? '🌤️ Warm • Interested'
-                                    : '❄️ Cold • No Response'}
+                                    ? '🌤️ Warm • Inquired'
+                                    : '❄️ Cold • Target with Offers'}
                                 </div>
                               </div>
                             </td>
-                            <td>
-                              {row.stepsCompleted}/{row.totalSteps} steps
-                            </td>
+
+                            {/* 7. Replies */}
                             <td>
                               <span style={{ fontWeight: 700, color: '#f1f5f9' }}>{row.attemptCount}</span> replies
                             </td>
-                            <td>{formatDuration(row.conversationDurationSec)}</td>
+
+                            {/* 8. Last Active */}
                             <td className="campaign-date">{new Date(row.lastActiveAt).toLocaleString('en-IN')}</td>
+
+                            {/* 9. Expand Icon */}
                             <td>{isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}</td>
                           </tr>
+
                           {isExpanded && (
                             <tr key={`${id}-detail`}>
-                              <td colSpan={8} style={{ padding: '0 0 16px 0' }}>
+                              <td colSpan={9} style={{ padding: '0 0 16px 0' }}>
                                 <ExpandedTimeline leadId={id} />
                               </td>
                             </tr>
@@ -880,10 +1404,10 @@ export default function LeadInterestPage() {
                         </Fragment>
                       )
                     })}
-                    {rows.length === 0 && (
+                    {filteredRows.length === 0 && (
                       <tr>
-                        <td colSpan={8} className="campaign-empty">
-                          No conversation activity yet. Send a campaign to start gathering responses!
+                        <td colSpan={9} className="campaign-empty">
+                          No leads found matching your category/search filters.
                         </td>
                       </tr>
                     )}

@@ -13,6 +13,11 @@ import type {
   DailyReport,
   ReminderLead,
   OverdueLead,
+  Project,
+  FbForm,
+  ConversationMessage,
+  AiHealthResponse,
+  LearnedQuestion,
 } from '@/types'
 
 // ─── Base URL ────────────────────────────────────────────────────────────────
@@ -1007,12 +1012,16 @@ export interface LeadRef {
 export interface LeadInterestRow {
   leadId: LeadRef | string
   phone: string
+  formName?: string | null
+  source?: string | null
+  projectName?: string | null
+  isFollowUpDue?: boolean
   currentStep: string
   totalSteps: number
   stepsCompleted: number
   interest: InterestLevel
   attemptCount: number
-  deliveryStatus?: 'sent' | 'delivered' | 'read' | 'replied'
+  deliveryStatus?: 'sent' | 'delivered' | 'read' | 'replied' | 'call' | 'manual'
   lastMessageFromUser?: string | null
   lastMessageAt?: string | null
   conversationDurationSec: number
@@ -1029,13 +1038,20 @@ export interface ConversationAnswerRow {
 }
 
 export interface LeadInterestDetail {
-  leadId: LeadRef | string
+  leadId: LeadRef | any
   phone: string
+  formName?: string | null
+  source?: string | null
+  projectName?: string | null
+  isFollowUpDue?: boolean
   currentStep: string
   answers: ConversationAnswerRow[]
   attemptCount: number
   totalSteps: number
   interest: InterestLevel
+  activeProjectId?: any
+  needsAgent?: boolean
+  aiPaused?: boolean
   startedAt: string
   completedAt?: string
   lastActiveAt: string
@@ -1122,3 +1138,206 @@ export async function reorderBotFlowSteps(stepIds: string[]): Promise<BotFlowSte
   })
   return handleResponse<BotFlowStep[]>(res)
 }
+
+// ─── Project Knowledge Base APIs ─────────────────────────────────────────────
+
+export async function fetchProjects(): Promise<Project[]> {
+  const res = await fetch(`${API_BASE}/projects`, { headers: authHeaders() })
+  const data = await handleResponse<{ success: boolean; projects: Project[] }>(res)
+  return data.projects || []
+}
+
+export async function createProject(payload: Partial<Project>): Promise<Project> {
+  const res = await fetch(`${API_BASE}/projects`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify(payload),
+  })
+  const data = await handleResponse<{ success: boolean; project: Project }>(res)
+  return data.project
+}
+
+export async function updateProject(id: string, payload: Partial<Project>): Promise<Project> {
+  const res = await fetch(`${API_BASE}/projects/${id}`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify(payload),
+  })
+  const data = await handleResponse<{ success: boolean; project: Project }>(res)
+  return data.project
+}
+
+export async function deleteProject(id: string): Promise<Project> {
+  const res = await fetch(`${API_BASE}/projects/${id}/deactivate`, {
+    method: 'PATCH',
+    headers: authHeaders(),
+  })
+  const data = await handleResponse<{ success: boolean; project: Project }>(res)
+  return data.project
+}
+
+// ─── Facebook Forms Mapping APIs ─────────────────────────────────────────────
+
+export async function fetchFbForms(): Promise<FbForm[]> {
+  const res = await fetch(`${API_BASE}/fb-forms`, { headers: authHeaders() })
+  const data = await handleResponse<{ success: boolean; forms: FbForm[] }>(res)
+  return data.forms || []
+}
+
+export async function syncFbForms(): Promise<{ success: boolean; message: string; totalSynced: number }> {
+  const res = await fetch(`${API_BASE}/fb-forms/sync`, {
+    method: 'POST',
+    headers: authHeaders(),
+  })
+  return handleResponse<{ success: boolean; message: string; totalSynced: number }>(res)
+}
+
+export async function mapFbForm(formId: string, projectId: string | null): Promise<FbForm> {
+  const res = await fetch(`${API_BASE}/fb-forms/${formId}`, {
+    method: 'PATCH',
+    headers: authHeaders(),
+    body: JSON.stringify({ projectId }),
+  })
+  const data = await handleResponse<{ success: boolean; form: FbForm }>(res)
+  return data.form
+}
+
+// ─── AI Chat & Lead Transcript APIs ──────────────────────────────────────────
+
+export async function fetchLeadMessages(leadId: string): Promise<ConversationMessage[]> {
+  const res = await fetch(`${API_BASE}/lead-interest/${leadId}/messages`, {
+    headers: authHeaders(),
+  })
+  const data = await handleResponse<{ success: boolean; messages: ConversationMessage[] }>(res)
+  return data.messages || []
+}
+
+export async function resumeLeadAi(leadId: string): Promise<{ success: boolean; message: string }> {
+  const res = await fetch(`${API_BASE}/lead-interest/${leadId}/resume-ai`, {
+    method: 'PATCH',
+    headers: authHeaders(),
+  })
+  return handleResponse<{ success: boolean; message: string }>(res)
+}
+
+export async function fetchAiHealth(): Promise<AiHealthResponse> {
+  const res = await fetch(`${API_BASE}/ai-chat/health`, {
+    headers: authHeaders(),
+  })
+  return handleResponse<AiHealthResponse>(res)
+}
+
+// ─── AI Continuous Learning APIs ─────────────────────────────────────────────
+
+export async function fetchLearnedQuestions(status: string = 'pending', projectId?: string): Promise<LearnedQuestion[]> {
+  const params = new URLSearchParams()
+  if (status) params.append('status', status)
+  if (projectId) params.append('projectId', projectId)
+  const qs = params.toString() ? `?${params.toString()}` : ''
+  const res = await fetch(`${API_BASE}/ai-chat/learned-questions${qs}`, {
+    headers: authHeaders(),
+  })
+  const data = await handleResponse<{ success: boolean; questions: LearnedQuestion[] }>(res)
+  return data.questions || []
+}
+
+export async function approveLearnedQuestion(
+  id: string,
+  answer: string,
+  question?: string,
+  keywords?: string[]
+): Promise<{ success: boolean; message: string; faq?: any; learnedQuestion?: LearnedQuestion }> {
+  const res = await fetch(`${API_BASE}/ai-chat/learned-questions/${id}/approve`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ answer, question, keywords }),
+  })
+  return handleResponse(res)
+}
+
+export async function rejectLearnedQuestion(id: string): Promise<{ success: boolean; message: string }> {
+  const res = await fetch(`${API_BASE}/ai-chat/learned-questions/${id}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  })
+  return handleResponse(res)
+}
+
+// ─── AI Model Training & First Message APIs ─────────────────────────────────
+
+export async function fetchTrainingData(projectId?: string): Promise<Project[]> {
+  const qs = projectId ? `?projectId=${encodeURIComponent(projectId)}` : ''
+  const res = await fetch(`${API_BASE}/ai-chat/training-data${qs}`, {
+    headers: authHeaders(),
+  })
+  const data = await handleResponse<{ success: boolean; projects: Project[] }>(res)
+  return data.projects || []
+}
+
+export async function insertTrainingData(payload: {
+  projectId?: string
+  question: string
+  answer: string
+  keywords?: string[]
+}): Promise<{ success: boolean; message: string; faq: any; project: Project }> {
+  const res = await fetch(`${API_BASE}/ai-chat/train`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify(payload),
+  })
+  return handleResponse(res)
+}
+
+export async function updateTrainingFaq(
+  projectId: string,
+  faqIndex: number,
+  payload: { question?: string; answer?: string; keywords?: string[] }
+): Promise<{ success: boolean; message: string; faqs: any[] }> {
+  const res = await fetch(`${API_BASE}/ai-chat/training-data/${projectId}/${faqIndex}`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify(payload),
+  })
+  return handleResponse(res)
+}
+
+export async function deleteTrainingFaq(
+  projectId: string,
+  faqIndex: number
+): Promise<{ success: boolean; message: string; faqs: any[] }> {
+  const res = await fetch(`${API_BASE}/ai-chat/training-data/${projectId}/${faqIndex}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  })
+  return handleResponse(res)
+}
+
+export async function fetchFirstMessage(projectId?: string): Promise<{
+  success: boolean
+  projectName: string
+  welcomeMessage: string
+  step1Question: string
+  step1Options: FlowOption[]
+}> {
+  const qs = projectId ? `?projectId=${encodeURIComponent(projectId)}` : ''
+  const res = await fetch(`${API_BASE}/ai-chat/first-message${qs}`, {
+    headers: authHeaders(),
+  })
+  return handleResponse(res)
+}
+
+export async function saveFirstMessage(payload: {
+  projectId?: string
+  welcomeMessage?: string
+  step1Question?: string
+  step1Options?: FlowOption[]
+}): Promise<{ success: boolean; message: string; welcomeMessage: string }> {
+  const res = await fetch(`${API_BASE}/ai-chat/first-message`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify(payload),
+  })
+  return handleResponse(res)
+}
+
+

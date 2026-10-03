@@ -224,6 +224,7 @@ const ForgotPasswordPage = React.lazy(() => import('./pages/ForgotPasswordPage')
 const ResetPasswordPage = React.lazy(() => import('./pages/ResetPasswordPage'))
 const CampaignsPage = React.lazy(() => import('./pages/CampaignsPage'))
 const TemplatesPage = React.lazy(() => import('./pages/Templatespage'))
+const ProjectsPage = React.lazy(() => import('./pages/ProjectsPage'))
 const LeadInterestPage = React.lazy(() => import('./pages/Leadinterestpage'))
 const WhatsAppConnectPage = React.lazy(
   () => import('./pages/Whatsappconnectpage')
@@ -240,6 +241,7 @@ function preloadAll() {
   import('./pages/ResetPasswordPage')
   import('./pages/CampaignsPage')
   import('./pages/Templatespage')
+  import('./pages/ProjectsPage')
   import('./pages/Leadinterestpage')
   import('./pages/Whatsappconnectpage')
 }
@@ -479,6 +481,11 @@ function AppRoutes() {
           <Route
             path="campaigns"
             element={<CampaignsPage />}
+          />
+
+          <Route
+            path="projects"
+            element={<ProjectsPage />}
           />
 
           <Route
