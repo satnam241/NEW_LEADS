@@ -1259,7 +1259,7 @@ export default function ProjectsPage() {
                 <MessageSquare size={18} style={{ color: '#38bdf8' }} />
                 <div>
                   <h4 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#fff' }}>
-                    1. Pehle Kya Message Bhejna Hai
+                    1. First Massage
                   </h4>
                   <p style={{ margin: '2px 0 0', fontSize: 11, color: '#94a3b8' }}>
                     Sent automatically with interactive buttons when lead reads the campaign message
@@ -1454,7 +1454,7 @@ export default function ProjectsPage() {
                 </label>
                 <input
                   className="input-base"
-                  placeholder="e.g. Kya 2BHK par modular kitchen free hai?"
+                  placeholder=""
                   value={trainQuestion}
                   onChange={e => setTrainQuestion(e.target.value)}
                 />
@@ -1468,7 +1468,7 @@ export default function ProjectsPage() {
                 <textarea
                   className="input-base"
                   rows={4}
-                  placeholder="e.g. Haan! Abhi festive season offer mein 2BHK flat par modular kitchen aur 1 covered car parking complimentary di ja rahi hai."
+                  placeholder=""
                   value={trainAnswer}
                   onChange={e => setTrainAnswer(e.target.value)}
                 />
@@ -1843,7 +1843,7 @@ export default function ProjectsPage() {
               <div style={{ background: 'rgba(59, 130, 246, 0.08)', padding: 14, borderRadius: 12, border: '1px solid rgba(59, 130, 246, 0.25)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                   <label style={{ fontSize: 13, fontWeight: 700, color: '#93c5fd', display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <MessageSquare size={16} /> First Message / Pehle kya message bhejna hai (WhatsApp Greeting)
+                    <MessageSquare size={16} /> First Message
                   </label>
                   <span style={{ fontSize: 11, color: '#94a3b8' }}>Supports &#123;&#123;name&#125;&#125;</span>
                 </div>
@@ -1855,9 +1855,7 @@ export default function ProjectsPage() {
                   onChange={e => setWelcomeMessage(e.target.value)}
                   style={{ borderColor: 'rgba(59, 130, 246, 0.4)' }}
                 />
-                <span style={{ fontSize: 11, color: '#94a3b8', marginTop: 4, display: 'block' }}>
-                  💡 Yeh message WhatsApp lead ko tab bheja jayega jaise hi user campaign message ko READ (blue tick) karega, interactive buttons ke sath!
-                </span>
+               
               </div>
 
               {/* Summary */}
