@@ -193,32 +193,9 @@ export default function Dashboard() {
   const presentCount        = st.total
   const contactedCount      = st.byStatus['Contacted'] ?? st.byStatus['contacted'] ?? 0
 
-  // Follow-ups: compute from actual overdue and today followups loaded on the page
-  const overdueCount        = overdueLeads.length
-  const dueTodayCount       = dueTodayLeads.length
-  const dueLeadsSet         = new Set<string>()
-  overdueLeads.forEach(l => {
-    const id = l._id ?? l.id
-    if (id) dueLeadsSet.add(String(id))
-  })
-  dueTodayLeads.forEach(l => {
-    const id = l._id ?? l.id
-    if (id) dueLeadsSet.add(String(id))
-  })
-
-  const allTimeDueFollowups =
-    dueLeadsSet.size > 0
-      ? dueLeadsSet.size
-      : (overdueCount + dueTodayCount > 0 ? overdueCount + dueTodayCount : ((st as any).allTimeDueFollowups ?? 0))
-
-  const dueFollowupsSublabel =
-    overdueCount > 0 && dueTodayCount > 0
-      ? `${overdueCount} overdue · ${dueTodayCount} today`
-      : overdueCount > 0
-      ? `${overdueCount} overdue in DB`
-      : dueTodayCount > 0
-      ? `${dueTodayCount} due today`
-      : 'All clear'
+  // Overdue follow-ups (strictly by day: before today, not due today)
+  const overdueCount    = overdueLeads.length
+  const overdueSublabel = overdueCount > 0 ? `${overdueCount} leads overdue` : 'All clear'
 
   const allTimeClosedCount  = (st as any).allTimeClosed ?? ((st.byStatus['Closed'] ?? 0) + (st.byStatus['closed'] ?? 0))
   const allTimeTotalLeads   = (st as any).allTimeTotalLeads ?? Math.max(presentCount, 30)
@@ -318,9 +295,9 @@ export default function Dashboard() {
               sublabel={`Contacted in ${MONTH_SHORT[selMonth-1]}`}
               onClick={() => navigate('/leads?status=Contacted')}
             />
-            <Ring value={allTimeDueFollowups} max={Math.max(allTimeTotalLeads, allTimeDueFollowups, 30)} color="#A8CCFF" size={ringSize} strokeWidth={ringStroke}
-              label="Due Followup"
-              sublabel={dueFollowupsSublabel}
+            <Ring value={overdueCount} max={Math.max(allTimeTotalLeads, overdueCount, 30)} color="#A8CCFF" size={ringSize} strokeWidth={ringStroke}
+              label="Overdue"
+              sublabel={overdueSublabel}
               onClick={() => navigate('/followups?tab=overdue')}
             />
             <Ring value={allTimeClosedCount} max={Math.max(allTimeTotalLeads, allTimeClosedCount, 30)} color="#A8CCFF" size={ringSize} strokeWidth={ringStroke}
