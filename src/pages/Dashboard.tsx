@@ -158,16 +158,29 @@ export default function Dashboard() {
   const isCurrentMonth = selMonth === now.getMonth() + 1 && selYear === now.getFullYear()
 
   const { data: s } = useMonthlyReport(selMonth, selYear)
+
+  // Follow-ups
+  const { data: overdueLeads  = [] } = useFollowups('overdue')
+  const { data: dueTodayLeads = [] } = useFollowups('today')
+  const { data: upcomingLeads = [] } = useFollowups('upcoming')
+
+  // Recent Leads
+  const { data: recentData, isLoading: loadingLeads } = useLeads(
+    { search, status: '', source: '', dateFrom: '', dateTo: '' }, 1
+  )
+  const recentLeads: Lead[] = recentData?.data ?? []
+
   const st = s ?? {
     total: 0, byStatus: {}, thisMonth: 0,
     todayFollowups: 0, overdueFollowups: 0,
     growthPercentage: 0, dailyGrowth: [],
   }
 
-  const presentCount  = st.total
-  const verifiedCount = st.byStatus['Contacted'] ?? st.byStatus['contacted'] ?? 0
-  const closedCount   = (st.byStatus['Closed'] ?? 0) + (st.byStatus['closed'] ?? 0)
-  const lostCount     = (st.byStatus['Lost']   ?? 0) + (st.byStatus['lost']   ?? 0)
+  const presentCount        = st.total
+  const contactedCount      = st.byStatus['Contacted'] ?? st.byStatus['contacted'] ?? 0
+  const allTimeDueFollowups = (st as any).allTimeDueFollowups ?? (overdueLeads.length + dueTodayLeads.length)
+  const allTimeClosedCount  = (st as any).allTimeClosed ?? ((st.byStatus['Closed'] ?? 0) + (st.byStatus['closed'] ?? 0))
+  const allTimeTotalLeads   = (st as any).allTimeTotalLeads ?? Math.max(presentCount, 30)
 
   const ringMax = Math.max(presentCount, 30)
 
@@ -189,17 +202,6 @@ export default function Dashboard() {
   }, [st.dailyGrowth, daysInSelectedMonth])
 
   const highlightDay = isCurrentMonth ? now.getDate() : null
-
-  // Recent Leads
-  const { data: recentData, isLoading: loadingLeads } = useLeads(
-    { search, status: '', source: '', dateFrom: '', dateTo: '' }, 1
-  )
-  const recentLeads: Lead[] = recentData?.data ?? []
-
-  // Follow-ups
-  const { data: overdueLeads  = [] } = useFollowups('overdue')
-  const { data: dueTodayLeads = [] } = useFollowups('today')
-  const { data: upcomingLeads = [] } = useFollowups('upcoming')
 
   const cardStyle: React.CSSProperties = { background: '#565656', borderRadius: 14 }
 
@@ -269,17 +271,17 @@ export default function Dashboard() {
               sublabel={`${st.total} leads in ${MONTH_SHORT[selMonth-1]}`}
               note={growthNote}
             />
-            <Ring value={verifiedCount} max={ringMax} color="#A8CCFF" size={ringSize} strokeWidth={ringStroke}
-              label={`Verified | ${MONTH_SHORT[selMonth-1]}`}
-              sublabel="In conversation"
+            <Ring value={contactedCount} max={ringMax} color="#A8CCFF" size={ringSize} strokeWidth={ringStroke}
+              label={`Contact | ${MONTH_SHORT[selMonth-1]}`}
+              sublabel={`Contacted in ${MONTH_SHORT[selMonth-1]}`}
             />
-            <Ring value={closedCount} max={ringMax} color="#A8CCFF" size={ringSize} strokeWidth={ringStroke}
-              label={`Closed | ${MONTH_SHORT[selMonth-1]}`}
-              sublabel="Deal won"
+            <Ring value={allTimeDueFollowups} max={Math.max(allTimeTotalLeads, allTimeDueFollowups, 30)} color="#A8CCFF" size={ringSize} strokeWidth={ringStroke}
+              label="Due Followup"
+              sublabel="From all leads in DB"
             />
-            <Ring value={lostCount} max={ringMax} color="#A8CCFF" size={ringSize} strokeWidth={ringStroke}
-              label={`Lost | ${MONTH_SHORT[selMonth-1]}`}
-              sublabel="Deal lost"
+            <Ring value={allTimeClosedCount} max={Math.max(allTimeTotalLeads, allTimeClosedCount, 30)} color="#A8CCFF" size={ringSize} strokeWidth={ringStroke}
+              label="Closed"
+              sublabel="All months / all leads"
             />
           </div>
         </div>

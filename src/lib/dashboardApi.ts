@@ -36,6 +36,9 @@ export interface DashboardAnalytics {
   followupStats: { pending: number; overdue: number; resolved: number }
   followupCompletionRate: string
   leadTemperatureStats: { hot: number; warm: number; cold: number }
+  allTimeClosed?: number
+  allTimeDueFollowups?: number
+  allTimeTotalLeads?: number
 }
 
 export interface DashboardReportResponse {
@@ -61,6 +64,9 @@ export async function fetchDashboardStats(
   prevByStatus: Record<string, number>
   followupStats: DashboardAnalytics['followupStats']
   leadTemperatureStats: DashboardAnalytics['leadTemperatureStats']
+  allTimeClosed: number
+  allTimeDueFollowups: number
+  allTimeTotalLeads: number
 }> {
   const token = getToken()
   if (!token) {
@@ -127,5 +133,10 @@ export async function fetchDashboardStats(
     prevByStatus:        a.prevByStatus ?? {},
     followupStats:       a.followupStats ?? { pending: 0, overdue: 0, resolved: 0 },
     leadTemperatureStats: a.leadTemperatureStats ?? { hot: 0, warm: 0, cold: 0 },
+
+    // ── All-time stats for rounds ─────────────────────────────
+    allTimeClosed:       a.allTimeClosed ?? ((a.byStatus['Closed'] ?? 0) + (a.byStatus['closed'] ?? 0)),
+    allTimeDueFollowups: a.allTimeDueFollowups ?? (todayFollowups + overdueFollowups),
+    allTimeTotalLeads:   a.allTimeTotalLeads ?? a.totalLeads,
   }
 }
