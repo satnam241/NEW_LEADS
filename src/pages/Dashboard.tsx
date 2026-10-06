@@ -36,8 +36,9 @@ interface RingProps {
   value: number; max: number; color: string
   label: string; sublabel?: string; note?: string
   size?: number; strokeWidth?: number
+  onClick?: () => void
 }
-function Ring({ value, max, color, label, sublabel, note, size = 115, strokeWidth = 14 }: RingProps) {
+function Ring({ value, max, color, label, sublabel, note, size = 115, strokeWidth = 14, onClick }: RingProps) {
   const stroke = strokeWidth
   const r      = (size - stroke) / 2
   const circ   = 2 * Math.PI * r
@@ -46,7 +47,20 @@ function Ring({ value, max, color, label, sublabel, note, size = 115, strokeWidt
   const valueFontSize = Math.round(size * 0.243)
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7 }}>
+    <div
+      onClick={onClick}
+      style={{
+        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7,
+        cursor: onClick ? 'pointer' : 'default',
+        transition: 'transform 0.15s ease',
+      }}
+      onMouseEnter={e => {
+        if (onClick) (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'
+      }}
+      onMouseLeave={e => {
+        if (onClick) (e.currentTarget as HTMLElement).style.transform = 'translateY(0)'
+      }}
+    >
       <div style={{ position: 'relative', width: size, height: size }}>
         <svg width={size} height={size} style={{ transform: 'rotate(-90deg)', display: 'block' }}>
           <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="#ececec" strokeWidth={stroke}/>
@@ -178,7 +192,34 @@ export default function Dashboard() {
 
   const presentCount        = st.total
   const contactedCount      = st.byStatus['Contacted'] ?? st.byStatus['contacted'] ?? 0
-  const allTimeDueFollowups = (st as any).allTimeDueFollowups ?? (overdueLeads.length + dueTodayLeads.length)
+
+  // Follow-ups: compute from actual overdue and today followups loaded on the page
+  const overdueCount        = overdueLeads.length
+  const dueTodayCount       = dueTodayLeads.length
+  const dueLeadsSet         = new Set<string>()
+  overdueLeads.forEach(l => {
+    const id = l._id ?? l.id
+    if (id) dueLeadsSet.add(String(id))
+  })
+  dueTodayLeads.forEach(l => {
+    const id = l._id ?? l.id
+    if (id) dueLeadsSet.add(String(id))
+  })
+
+  const allTimeDueFollowups =
+    dueLeadsSet.size > 0
+      ? dueLeadsSet.size
+      : (overdueCount + dueTodayCount > 0 ? overdueCount + dueTodayCount : ((st as any).allTimeDueFollowups ?? 0))
+
+  const dueFollowupsSublabel =
+    overdueCount > 0 && dueTodayCount > 0
+      ? `${overdueCount} overdue · ${dueTodayCount} today`
+      : overdueCount > 0
+      ? `${overdueCount} overdue in DB`
+      : dueTodayCount > 0
+      ? `${dueTodayCount} due today`
+      : 'All clear'
+
   const allTimeClosedCount  = (st as any).allTimeClosed ?? ((st.byStatus['Closed'] ?? 0) + (st.byStatus['closed'] ?? 0))
   const allTimeTotalLeads   = (st as any).allTimeTotalLeads ?? Math.max(presentCount, 30)
 
@@ -270,18 +311,22 @@ export default function Dashboard() {
               label={`Present | ${MONTH_SHORT[selMonth-1]}`}
               sublabel={`${st.total} leads in ${MONTH_SHORT[selMonth-1]}`}
               note={growthNote}
+              onClick={() => navigate('/leads')}
             />
             <Ring value={contactedCount} max={ringMax} color="#A8CCFF" size={ringSize} strokeWidth={ringStroke}
               label={`Contact | ${MONTH_SHORT[selMonth-1]}`}
               sublabel={`Contacted in ${MONTH_SHORT[selMonth-1]}`}
+              onClick={() => navigate('/leads?status=Contacted')}
             />
             <Ring value={allTimeDueFollowups} max={Math.max(allTimeTotalLeads, allTimeDueFollowups, 30)} color="#A8CCFF" size={ringSize} strokeWidth={ringStroke}
               label="Due Followup"
-              sublabel="From all leads in DB"
+              sublabel={dueFollowupsSublabel}
+              onClick={() => navigate('/followups?tab=overdue')}
             />
             <Ring value={allTimeClosedCount} max={Math.max(allTimeTotalLeads, allTimeClosedCount, 30)} color="#A8CCFF" size={ringSize} strokeWidth={ringStroke}
               label="Closed"
               sublabel="All months / all leads"
+              onClick={() => navigate('/leads?status=Closed')}
             />
           </div>
         </div>
