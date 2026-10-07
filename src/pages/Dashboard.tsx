@@ -191,7 +191,7 @@ export default function Dashboard() {
   }
 
   const presentCount        = st.total
-  const contactedCount      = st.byStatus['Contacted'] ?? st.byStatus['contacted'] ?? 0
+  const contactedCount      = (st as any).contactedInMonth ?? st.byStatus['Contacted'] ?? st.byStatus['contacted'] ?? 0
 
   // Overdue follow-ups (strictly by day: before today, not due today)
   const overdueCount    = overdueLeads.length

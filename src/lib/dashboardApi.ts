@@ -39,6 +39,7 @@ export interface DashboardAnalytics {
   allTimeClosed?: number
   allTimeDueFollowups?: number
   allTimeTotalLeads?: number
+  contactedInMonth?: number
 }
 
 export interface DashboardReportResponse {
@@ -67,6 +68,7 @@ export async function fetchDashboardStats(
   allTimeClosed: number
   allTimeDueFollowups: number
   allTimeTotalLeads: number
+  contactedInMonth: number
 }> {
   const token = getToken()
   if (!token) {
@@ -138,5 +140,6 @@ export async function fetchDashboardStats(
     allTimeClosed:       a.allTimeClosed ?? ((a.byStatus['Closed'] ?? 0) + (a.byStatus['closed'] ?? 0)),
     allTimeDueFollowups: a.allTimeDueFollowups ?? (todayFollowups + overdueFollowups),
     allTimeTotalLeads:   a.allTimeTotalLeads ?? a.totalLeads,
+    contactedInMonth:    a.contactedInMonth ?? a.byStatus['Contacted'] ?? a.byStatus['contacted'] ?? 0,
   }
 }
