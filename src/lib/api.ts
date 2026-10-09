@@ -1340,4 +1340,41 @@ export async function saveFirstMessage(payload: {
   return handleResponse(res)
 }
 
+export async function deleteFirstMessage(projectId?: string): Promise<{ success: boolean; message: string }> {
+  const endpoint = projectId ? `${API_BASE}/ai-chat/first-message/${projectId}` : `${API_BASE}/ai-chat/first-message`
+  const res = await fetch(endpoint, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  })
+  return handleResponse<{ success: boolean; message: string }>(res)
+}
+
+// ─── Project Media Upload & Management APIs ─────────────────────────────────
+
+export async function uploadProjectMedia(
+  projectId: string,
+  formData: FormData
+): Promise<{ success: boolean; message: string; project: Project }> {
+  const token = getToken()
+  const res = await fetch(`${API_BASE}/projects/${projectId}/media`, {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: formData,
+  })
+  return handleResponse<{ success: boolean; message: string; project: Project }>(res)
+}
+
+export async function deleteProjectMedia(
+  projectId: string,
+  payload: { type: 'image' | 'video' | 'map' | 'brochure'; url?: string }
+): Promise<{ success: boolean; message: string; project: Project }> {
+  const res = await fetch(`${API_BASE}/projects/${projectId}/media`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+    body: JSON.stringify(payload),
+  })
+  return handleResponse<{ success: boolean; message: string; project: Project }>(res)
+}
+
+
 

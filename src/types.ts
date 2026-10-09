@@ -229,6 +229,10 @@ export interface Project {
   doNotSay: string[]
   faqs: ProjectFAQ[]
   welcomeMessage?: string
+  images?: string[]
+  videos?: string[]
+  map?: string
+  brochure?: string
   isActive: boolean
   createdAt?: string
   updatedAt?: string
