@@ -11,7 +11,9 @@ import {
   fetchLearnedQuestions, approveLearnedQuestion, rejectLearnedQuestion,
   fetchTrainingData, insertTrainingData, deleteTrainingFaq,
   fetchFirstMessage, saveFirstMessage, deleteFirstMessage,
-  uploadProjectMedia, deleteProjectMedia
+  uploadProjectMedia, deleteProjectMedia,
+  fetchSharesampattiSyncStats, triggerSharesampattiSync,
+  type SharesampattiSyncStats
 } from '../lib/api'
 import type { Project, FbForm, UnitType, ProjectFAQ, AiHealthResponse, LearnedQuestion, FlowOption } from '../types'
 
@@ -32,6 +34,11 @@ export default function ProjectsPage() {
   const [trainKeywords, setTrainKeywords] = useState('')
   const [trainingLoading, setTrainingLoading] = useState(false)
   const [trainingFaqSearch, setTrainingFaqSearch] = useState('')
+
+  // Automated Training Sync (llm.sharesampatti.com)
+  const [sharesampattiStats, setSharesampattiStats] = useState<SharesampattiSyncStats | null>(null)
+  const [syncingSharesampatti, setSyncingSharesampatti] = useState(false)
+  const [showDirectDbGuide, setShowDirectDbGuide] = useState(false)
 
   // First Message Configuration states ("Pehle kya msg krna h")
   const [firstMsgScope, setFirstMsgScope] = useState<'universal' | 'project'>('universal')
@@ -106,16 +113,19 @@ export default function ProjectsPage() {
     setLoading(true)
     setError('')
     try {
-      const [projList, formList, healthData, pendingQ] = await Promise.all([
+      const [projList, formList, healthData, pendingQ, syncStats] = await Promise.all([
         fetchProjects(),
         fetchFbForms(),
         fetchAiHealth().catch(() => ({ success: false, online: false, queueLength: 0, message: 'LLM not reachable' })),
-        fetchLearnedQuestions('pending').catch(() => [])
+        fetchLearnedQuestions('pending').catch(() => []),
+        fetchSharesampattiSyncStats().catch(() => null),
       ])
       setProjects(projList)
       setForms(formList)
       setAiHealth(healthData)
       setPendingCount(pendingQ.length)
+      if (syncStats) setSharesampattiStats(syncStats)
+
       if (learningStatus === 'pending') {
         setLearnedQuestions(pendingQ)
       } else {
@@ -132,6 +142,22 @@ export default function ProjectsPage() {
       setError(err?.message || 'Failed to load projects data')
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function handleTriggerSharesampattiSync() {
+    setSyncingSharesampatti(true)
+    setError('')
+    try {
+      const res = await triggerSharesampattiSync()
+      setSuccessMsg(res.message || `✓ Synced ${res.syncedCount} conversations to llm.sharesampatti.com!`)
+      setTimeout(() => setSuccessMsg(''), 4000)
+      const stats = await fetchSharesampattiSyncStats().catch(() => null)
+      if (stats) setSharesampattiStats(stats)
+    } catch (err: any) {
+      setError(err?.message || 'Failed to trigger automated training sync')
+    } finally {
+      setSyncingSharesampatti(false)
     }
   }
 
@@ -607,7 +633,13 @@ export default function ProjectsPage() {
                 background: aiHealth?.online ? '#22c55e' : '#ef4444',
               }}
             />
-            {aiHealth?.online ? `Llama 3.2 AI Online (Llamafile)` : 'Llamafile AI Offline'}
+            {aiHealth?.online
+              ? (aiHealth.provider === 'gemini'
+                  ? `Google Gemini (${aiHealth.model || '2.5-flash'})`
+                  : aiHealth.provider
+                  ? `AI Online (${aiHealth.provider.toUpperCase()})`
+                  : `AI Thinker Online (${aiHealth.model || 'Active'})`)
+              : 'AI Thinker Offline'}
           </div>
 
           <button className="campaign-primary-btn" onClick={openCreateModal}>
@@ -1456,6 +1488,224 @@ export default function ProjectsPage() {
             >
               <RefreshCw size={14} className={loading ? 'spin' : ''} /> Ping Engine
             </button>
+          </div>
+
+          {/* Automated Training & Direct DB Sync with llm.sharesampatti.com */}
+          <div
+            className="card-raised"
+            style={{
+              padding: '18px 22px',
+              borderRadius: 16,
+              background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.12), rgba(168, 85, 247, 0.15))',
+              border: '1px solid rgba(168, 85, 247, 0.3)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 16,
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div
+                  style={{
+                    width: 42,
+                    height: 42,
+                    borderRadius: 12,
+                    background: 'rgba(168, 85, 247, 0.25)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#c084fc',
+                  }}
+                >
+                  <Sparkles size={22} />
+                </div>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: '#fff' }}>
+                      Automated Model Training & DB Sync (llm.sharesampatti.com)
+                    </h3>
+                    <span
+                      style={{
+                        padding: '2px 8px',
+                        borderRadius: 12,
+                        fontSize: 11,
+                        fontWeight: 700,
+                        background: sharesampattiStats?.isOnline ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)',
+                        color: sharesampattiStats?.isOnline ? '#86efac' : '#fca5a5',
+                        border: `1px solid ${sharesampattiStats?.isOnline ? 'rgba(34, 197, 94, 0.4)' : 'rgba(239, 68, 68, 0.4)'}`,
+                      }}
+                    >
+                      {sharesampattiStats?.isOnline ? '● Server Online' : '○ Checking Connection'}
+                    </span>
+                    <span
+                      style={{
+                        padding: '2px 8px',
+                        borderRadius: 12,
+                        fontSize: 11,
+                        fontWeight: 600,
+                        background: 'rgba(99, 102, 241, 0.2)',
+                        color: '#a5b4fc',
+                        border: '1px solid rgba(99, 102, 241, 0.4)',
+                      }}
+                    >
+                      🔄 Auto-Sync: Every 30 Mins
+                    </span>
+                  </div>
+                  <p style={{ margin: '4px 0 0', fontSize: 12, color: '#94a3b8' }}>
+                    Directly connected to MongoDB database. Real user-AI conversations and verified project Q&A automatically feed into the training pipeline.
+                  </p>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <button
+                  type="button"
+                  onClick={handleTriggerSharesampattiSync}
+                  disabled={syncingSharesampatti}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    padding: '8px 16px',
+                    borderRadius: 8,
+                    fontSize: 12,
+                    fontWeight: 700,
+                    background: 'linear-gradient(135deg, #6366f1, #a855f7)',
+                    border: 'none',
+                    color: '#fff',
+                    cursor: syncingSharesampatti ? 'not-allowed' : 'pointer',
+                    boxShadow: '0 2px 8px rgba(168, 85, 247, 0.3)',
+                  }}
+                >
+                  <RefreshCw size={14} className={syncingSharesampatti ? 'spin' : ''} />
+                  {syncingSharesampatti ? 'Syncing...' : 'Sync & Auto-Train Now'}
+                </button>
+              </div>
+            </div>
+
+            {/* Sync Metric Tiles */}
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                gap: 12,
+              }}
+            >
+              <div
+                style={{
+                  padding: '12px 14px',
+                  borderRadius: 10,
+                  background: 'rgba(0,0,0,0.25)',
+                  border: '1px solid rgba(255,255,255,0.06)',
+                }}
+              >
+                <div style={{ fontSize: 11, color: '#94a3b8', fontWeight: 600 }}>Active Model</div>
+                <div style={{ fontSize: 13, color: '#c084fc', fontWeight: 700, marginTop: 4, wordBreak: 'break-all' }}>
+                  {sharesampattiStats?.activeModel?.split('/').pop() || 'Llama-3.2-3B-Instruct'}
+                </div>
+              </div>
+
+              <div
+                style={{
+                  padding: '12px 14px',
+                  borderRadius: 10,
+                  background: 'rgba(0,0,0,0.25)',
+                  border: '1px solid rgba(255,255,255,0.06)',
+                }}
+              >
+                <div style={{ fontSize: 11, color: '#94a3b8', fontWeight: 600 }}>Conversations in DB</div>
+                <div style={{ fontSize: 18, color: '#fff', fontWeight: 700, marginTop: 2 }}>
+                  {sharesampattiStats?.totalInDb ?? 0}
+                </div>
+              </div>
+
+              <div
+                style={{
+                  padding: '12px 14px',
+                  borderRadius: 10,
+                  background: 'rgba(0,0,0,0.25)',
+                  border: '1px solid rgba(255,255,255,0.06)',
+                }}
+              >
+                <div style={{ fontSize: 11, color: '#94a3b8', fontWeight: 600 }}>Synced to Dataset</div>
+                <div style={{ fontSize: 18, color: '#86efac', fontWeight: 700, marginTop: 2 }}>
+                  {sharesampattiStats?.syncedToSharesampatti ?? 0}
+                </div>
+              </div>
+
+              <div
+                style={{
+                  padding: '12px 14px',
+                  borderRadius: 10,
+                  background: 'rgba(0,0,0,0.25)',
+                  border: '1px solid rgba(255,255,255,0.06)',
+                }}
+              >
+                <div style={{ fontSize: 11, color: '#94a3b8', fontWeight: 600 }}>Pending Sync</div>
+                <div style={{ fontSize: 18, color: (sharesampattiStats?.pendingSync ?? 0) > 0 ? '#fbbf24' : '#94a3b8', fontWeight: 700, marginTop: 2 }}>
+                  {sharesampattiStats?.pendingSync ?? 0}
+                </div>
+              </div>
+            </div>
+
+            {/* Direct DB Connect / Autonomous Daemon Helper */}
+            <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 10 }}>
+              <button
+                type="button"
+                onClick={() => setShowDirectDbGuide(!showDirectDbGuide)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#a78bfa',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: 0,
+                }}
+              >
+                {showDirectDbGuide ? '▾ Hide Direct Database Daemon Details' : '▸ Show Direct Database Daemon Details (for llm.sharesampatti.com VPS)'}
+              </button>
+
+              {showDirectDbGuide && (
+                <div
+                  style={{
+                    marginTop: 10,
+                    padding: 12,
+                    borderRadius: 8,
+                    background: 'rgba(0,0,0,0.35)',
+                    border: '1px solid rgba(255,255,255,0.06)',
+                    fontSize: 12,
+                    color: '#cbd5e1',
+                    lineHeight: 1.6,
+                  }}
+                >
+                  <p style={{ margin: '0 0 6px' }}>
+                    💡 <strong>Direct MongoDB Connection:</strong> On your <code>llm.sharesampatti.com</code> VPS server, you can run the automated training daemon script directly:
+                  </p>
+                  <pre
+                    style={{
+                      background: 'rgba(0,0,0,0.6)',
+                      padding: '8px 12px',
+                      borderRadius: 6,
+                      color: '#a7f3d0',
+                      fontFamily: 'monospace',
+                      fontSize: 12,
+                      overflowX: 'auto',
+                      margin: '6px 0',
+                    }}
+                  >
+                    {`# On llm.sharesampatti.com server:
+python3 scripts/auto_train_sharesampatti.py --daemon`}
+                  </pre>
+                  <p style={{ margin: '6px 0 0', color: '#94a3b8', fontSize: 11 }}>
+                    This script directly connects to MongoDB, extracts all verified conversations and project facts into <code>/opt/llm/sharesampatti_training_dataset.jsonl</code>, and continuously fine-tunes your local open-source model!
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Two-Column Grid: First Message & Quick Knowledge Training */}

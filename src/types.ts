@@ -270,6 +270,7 @@ export interface AiHealthResponse {
   message: string
   model?: string
   baseUrl?: string
+  provider?: string
 }
 
 // ── AI Auto-Learning & Discovered Questions Types ────────────────────────────

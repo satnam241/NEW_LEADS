@@ -1376,5 +1376,34 @@ export async function deleteProjectMedia(
   return handleResponse<{ success: boolean; message: string; project: Project }>(res)
 }
 
+// ─── Automated Training & Direct DB Sync for llm.sharesampatti.com ──────────
+
+export interface SharesampattiSyncStats {
+  serverUrl: string
+  isOnline: boolean
+  totalInDb: number
+  syncedToSharesampatti: number
+  pendingSync: number
+  lastSyncedAt: string | null
+  activeModel: string
+}
+
+export async function fetchSharesampattiSyncStats(): Promise<SharesampattiSyncStats> {
+  const res = await fetch(`${API_BASE}/ai-chat/sharesampatti-sync/stats`, {
+    headers: authHeaders(),
+  })
+  const data = await handleResponse<{ success: boolean; stats: SharesampattiSyncStats }>(res)
+  return data.stats
+}
+
+export async function triggerSharesampattiSync(): Promise<{ success: boolean; syncedCount: number; message: string }> {
+  const res = await fetch(`${API_BASE}/ai-chat/sharesampatti-sync/trigger`, {
+    method: 'POST',
+    headers: authHeaders(),
+  })
+  return handleResponse<{ success: boolean; syncedCount: number; message: string }>(res)
+}
+
+
 
 
