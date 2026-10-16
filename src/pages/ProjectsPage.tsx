@@ -17,6 +17,31 @@ import {
 } from '../lib/api'
 import type { Project, FbForm, UnitType, ProjectFAQ, AiHealthResponse, LearnedQuestion, FlowOption } from '../types'
 
+/**
+ * Robust media URL resolver:
+ * Correctly strips trailing `/api` from VITE_API_URL1 so static file paths
+ * like `/public/uploads/xxx.png` resolve to `http://localhost:4520/public/uploads/xxx.png`
+ * without generating broken 404 paths. Also supports external https/http and blob URLs.
+ */
+export function resolveMediaUrl(url?: string): string {
+  if (!url || typeof url !== 'string') return ''
+  const trimmed = url.trim()
+  if (!trimmed) return ''
+  if (
+    trimmed.startsWith('http://') ||
+    trimmed.startsWith('https://') ||
+    trimmed.startsWith('blob:') ||
+    trimmed.startsWith('data:')
+  ) {
+    return trimmed
+  }
+
+  const rawBase = (import.meta.env.VITE_API_URL1 || 'http://localhost:4520/api').trim()
+  const hostOrigin = rawBase.replace(/\/api\/?$/i, '').replace(/\/+$/, '')
+  const cleanPath = trimmed.startsWith('/') ? trimmed : `/${trimmed}`
+  return `${hostOrigin}${cleanPath}`
+}
+
 export default function ProjectsPage() {
   const [activeTab, setActiveTab] = useState<'projects' | 'forms' | 'learning' | 'training'>('projects')
 
@@ -2366,9 +2391,9 @@ python3 scripts/auto_train_sharesampatti.py --daemon`}
               <div style={{ background: 'rgba(59, 130, 246, 0.08)', padding: 14, borderRadius: 12, border: '1px solid rgba(59, 130, 246, 0.25)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                   <label style={{ fontSize: 13, fontWeight: 700, color: '#93c5fd', display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <MessageSquare size={16} /> First Message (Optional Project Override)
+                    <MessageSquare size={16} /> First Message 
                   </label>
-                  <span style={{ fontSize: 11, color: '#86efac' }}>Khali chhodenge toh Universal First Message use hoga</span>
+                 
                 </div>
                 <textarea
                   className="input-base"
@@ -2437,9 +2462,14 @@ python3 scripts/auto_train_sharesampatti.py --daemon`}
 
               {/* Project Media Links */}
               <div style={{ background: 'rgba(56, 189, 248, 0.06)', padding: 14, borderRadius: 12, border: '1px solid rgba(56, 189, 248, 0.2)' }}>
-                <span style={{ fontSize: 13, fontWeight: 700, color: '#38bdf8', display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
-                  <Image size={16} /> Project Media Links (Auto-sent to leads on WhatsApp)
-                </span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: '#38bdf8', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <Image size={16} /> Project Media Links (Auto-sent to leads on WhatsApp)
+                  </span>
+                </div>
+                <p style={{ margin: '0 0 10px', fontSize: 11, color: '#94a3b8' }}>
+                  Tip: Paste URLs below, or click the <strong style={{ color: '#38bdf8' }}>Upload Media</strong> button on any project card to upload images, videos, maps & brochures directly from your computer.
+                </p>
                 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 10 }}>
                   <div>
@@ -2448,10 +2478,17 @@ python3 scripts/auto_train_sharesampatti.py --daemon`}
                     </label>
                     <input
                       className="input-base"
-                      placeholder="e.g. https://.../layout-map.jpg"
+                      placeholder="e.g. /public/uploads/... or https://.../map.jpg"
                       value={mapInput}
                       onChange={e => setMapInput(e.target.value)}
                     />
+                    {mapInput && (
+                      <div style={{ marginTop: 4 }}>
+                        <a href={resolveMediaUrl(mapInput)} target="_blank" rel="noreferrer" style={{ fontSize: 11, color: '#38bdf8', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                          <Eye size={11} /> Preview Map
+                        </a>
+                      </div>
+                    )}
                   </div>
                   <div>
                     <label style={{ fontSize: 12, fontWeight: 600, color: '#cbd5e1', marginBottom: 4, display: 'block' }}>
@@ -2459,10 +2496,17 @@ python3 scripts/auto_train_sharesampatti.py --daemon`}
                     </label>
                     <input
                       className="input-base"
-                      placeholder="e.g. https://.../brochure.pdf"
+                      placeholder="e.g. /public/uploads/... or https://.../brochure.pdf"
                       value={brochureInput}
                       onChange={e => setBrochureInput(e.target.value)}
                     />
+                    {brochureInput && (
+                      <div style={{ marginTop: 4 }}>
+                        <a href={resolveMediaUrl(brochureInput)} target="_blank" rel="noreferrer" style={{ fontSize: 11, color: '#38bdf8', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                          <Eye size={11} /> Preview PDF
+                        </a>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -2767,7 +2811,10 @@ python3 scripts/auto_train_sharesampatti.py --daemon`}
                   }
                   style={{ display: 'none' }}
                   disabled={uploadingMedia}
-                  onChange={e => handleFileUpload(e.target.files, mediaTab)}
+                  onChange={e => {
+                    handleFileUpload(e.target.files, mediaTab)
+                    e.target.value = ''
+                  }}
                 />
               </label>
 
@@ -2806,118 +2853,142 @@ python3 scripts/auto_train_sharesampatti.py --daemon`}
                       No photos uploaded for this project yet. Upload photos to auto-send when customers ask.
                     </div>
                   ) : (
-                    selectedMediaProject.images!.map((imgUrl, idx) => (
-                      <div
-                        key={idx}
-                        style={{
-                          position: 'relative',
-                          borderRadius: 10,
-                          overflow: 'hidden',
-                          background: '#18181b',
-                          border: '1px solid rgba(255,255,255,0.1)',
-                          aspectRatio: '16/10',
-                        }}
-                      >
-                        <img
-                          src={imgUrl.startsWith('http') ? imgUrl : `${(import.meta.env.VITE_API_URL1 || '').replace(/\/+$/, '')}${imgUrl.startsWith('/') ? '' : '/'}${imgUrl}`}
-                          alt={`Project ${idx + 1}`}
-                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                          onError={(e: any) => { e.target.src = 'https://placehold.co/300x200?text=Image+Unavailable'; }}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteMedia('image', imgUrl)}
-                          disabled={uploadingMedia}
+                    selectedMediaProject.images!.map((imgUrl, idx) => {
+                      const fullUrl = resolveMediaUrl(imgUrl);
+                      return (
+                        <div
+                          key={idx}
                           style={{
-                            position: 'absolute',
-                            top: 6,
-                            right: 6,
-                            background: 'rgba(239, 68, 68, 0.85)',
-                            color: '#fff',
-                            border: 'none',
-                            borderRadius: '50%',
-                            width: 26,
-                            height: 26,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            cursor: 'pointer',
+                            position: 'relative',
+                            borderRadius: 10,
+                            overflow: 'hidden',
+                            background: '#18181b',
+                            border: '1px solid rgba(255,255,255,0.1)',
+                            aspectRatio: '16/10',
                           }}
-                          title="Delete photo"
                         >
-                          <Trash2 size={13} />
-                        </button>
-                      </div>
-                    ))
+                          <a
+                            href={fullUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            title="Click to view full photo"
+                            style={{ display: 'block', width: '100%', height: '100%' }}
+                          >
+                            <img
+                              src={fullUrl}
+                              alt={`Project ${idx + 1}`}
+                              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                              onError={(e: any) => { e.target.src = 'https://placehold.co/300x200?text=Image+Unavailable'; }}
+                            />
+                          </a>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteMedia('image', imgUrl)}
+                            disabled={uploadingMedia}
+                            style={{
+                              position: 'absolute',
+                              top: 6,
+                              right: 6,
+                              background: 'rgba(239, 68, 68, 0.85)',
+                              color: '#fff',
+                              border: 'none',
+                              borderRadius: '50%',
+                              width: 26,
+                              height: 26,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              cursor: 'pointer',
+                            }}
+                            title="Delete photo"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      );
+                    })
                   )}
                 </div>
               )}
 
               {/* VIDEOS TAB */}
               {mediaTab === 'videos' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                   {(selectedMediaProject.videos || []).length === 0 ? (
                     <div style={{ padding: 24, textAlign: 'center', color: '#64748b', fontSize: 12 }}>
                       No walkthrough videos uploaded yet. Upload MP4 video to auto-send when customers ask.
                     </div>
                   ) : (
-                    selectedMediaProject.videos!.map((vidUrl, idx) => (
-                      <div
-                        key={idx}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          padding: '10px 14px',
-                          background: '#18181b',
-                          borderRadius: 8,
-                          border: '1px solid rgba(255,255,255,0.08)',
-                        }}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, overflow: 'hidden' }}>
-                          <Video size={18} style={{ color: '#a855f7', flexShrink: 0 }} />
-                          <span style={{ fontSize: 12, color: '#e2e8f0', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-                            {vidUrl}
-                          </span>
+                    selectedMediaProject.videos!.map((vidUrl, idx) => {
+                      const fullUrl = resolveMediaUrl(vidUrl);
+                      return (
+                        <div
+                          key={idx}
+                          style={{
+                            padding: '12px 14px',
+                            background: '#18181b',
+                            borderRadius: 10,
+                            border: '1px solid rgba(255,255,255,0.08)',
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10, overflow: 'hidden' }}>
+                              <Video size={18} style={{ color: '#a855f7', flexShrink: 0 }} />
+                              <span style={{ fontSize: 12, color: '#e2e8f0', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                                {vidUrl}
+                              </span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                              <a
+                                href={fullUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                style={{
+                                  padding: '4px 10px',
+                                  borderRadius: 6,
+                                  fontSize: 11,
+                                  background: 'rgba(255,255,255,0.08)',
+                                  color: '#38bdf8',
+                                  textDecoration: 'none',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: 4,
+                                }}
+                              >
+                                <Eye size={12} /> View Full
+                              </a>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteMedia('video', vidUrl)}
+                                disabled={uploadingMedia}
+                                style={{
+                                  padding: '4px 8px',
+                                  borderRadius: 6,
+                                  fontSize: 11,
+                                  background: 'rgba(239, 68, 68, 0.15)',
+                                  color: '#fca5a5',
+                                  border: '1px solid rgba(239, 68, 68, 0.3)',
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                            </div>
+                          </div>
+                          {/* Live Video Player Preview */}
+                          <div style={{ borderRadius: 8, overflow: 'hidden', background: '#000', maxHeight: 240 }}>
+                            <video
+                              controls
+                              preload="metadata"
+                              src={fullUrl}
+                              style={{ width: '100%', maxHeight: 240, display: 'block' }}
+                            >
+                              Your browser does not support the video tag.
+                            </video>
+                          </div>
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-                          <a
-                            href={vidUrl.startsWith('http') ? vidUrl : `${(import.meta.env.VITE_API_URL1 || '').replace(/\/+$/, '')}${vidUrl.startsWith('/') ? '' : '/'}${vidUrl}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            style={{
-                              padding: '4px 10px',
-                              borderRadius: 6,
-                              fontSize: 11,
-                              background: 'rgba(255,255,255,0.08)',
-                              color: '#38bdf8',
-                              textDecoration: 'none',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: 4,
-                            }}
-                          >
-                            <Eye size={12} /> View
-                          </a>
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteMedia('video', vidUrl)}
-                            disabled={uploadingMedia}
-                            style={{
-                              padding: '4px 8px',
-                              borderRadius: 6,
-                              fontSize: 11,
-                              background: 'rgba(239, 68, 68, 0.15)',
-                              color: '#fca5a5',
-                              border: '1px solid rgba(239, 68, 68, 0.3)',
-                              cursor: 'pointer',
-                            }}
-                          >
-                            <Trash2 size={12} />
-                          </button>
-                        </div>
-                      </div>
-                    ))
+                      );
+                    })
                   )}
                 </div>
               )}
@@ -2933,31 +3004,59 @@ python3 scripts/auto_train_sharesampatti.py --daemon`}
                     <div style={{ borderRadius: 10, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)', background: '#18181b', padding: 12 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
                         <span style={{ fontSize: 12, color: '#86efac', fontWeight: 600 }}>✓ Master Layout Map Active</span>
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteMedia('map')}
-                          disabled={uploadingMedia}
-                          style={{
-                            padding: '4px 10px',
-                            borderRadius: 6,
-                            fontSize: 11,
-                            background: 'rgba(239, 68, 68, 0.15)',
-                            color: '#fca5a5',
-                            border: '1px solid rgba(239, 68, 68, 0.3)',
-                            cursor: 'pointer',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: 4,
-                          }}
-                        >
-                          <Trash2 size={12} /> Remove Map
-                        </button>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <a
+                            href={resolveMediaUrl(selectedMediaProject.map)}
+                            target="_blank"
+                            rel="noreferrer"
+                            style={{
+                              padding: '4px 10px',
+                              borderRadius: 6,
+                              fontSize: 11,
+                              background: 'rgba(56, 189, 248, 0.15)',
+                              color: '#38bdf8',
+                              border: '1px solid rgba(56, 189, 248, 0.3)',
+                              textDecoration: 'none',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 4,
+                            }}
+                          >
+                            <ExternalLink size={12} /> Open Full Map
+                          </a>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteMedia('map')}
+                            disabled={uploadingMedia}
+                            style={{
+                              padding: '4px 10px',
+                              borderRadius: 6,
+                              fontSize: 11,
+                              background: 'rgba(239, 68, 68, 0.15)',
+                              color: '#fca5a5',
+                              border: '1px solid rgba(239, 68, 68, 0.3)',
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 4,
+                            }}
+                          >
+                            <Trash2 size={12} /> Remove Map
+                          </button>
+                        </div>
                       </div>
-                      <img
-                        src={selectedMediaProject.map.startsWith('http') ? selectedMediaProject.map : `${(import.meta.env.VITE_API_URL1 || '').replace(/\/+$/, '')}${selectedMediaProject.map.startsWith('/') ? '' : '/'}${selectedMediaProject.map}`}
-                        alt="Master Layout Map"
-                        style={{ maxWidth: '100%', maxHeight: 360, objectFit: 'contain', margin: '0 auto', display: 'block', borderRadius: 8 }}
-                      />
+                      <a
+                        href={resolveMediaUrl(selectedMediaProject.map)}
+                        target="_blank"
+                        rel="noreferrer"
+                        title="Click to view full layout map"
+                      >
+                        <img
+                          src={resolveMediaUrl(selectedMediaProject.map)}
+                          alt="Master Layout Map"
+                          style={{ maxWidth: '100%', maxHeight: 360, objectFit: 'contain', margin: '0 auto', display: 'block', borderRadius: 8, cursor: 'pointer' }}
+                        />
+                      </a>
                     </div>
                   )}
                 </div>
@@ -2971,49 +3070,60 @@ python3 scripts/auto_train_sharesampatti.py --daemon`}
                       No PDF brochure uploaded yet. Upload official brochure PDF.
                     </div>
                   ) : (
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 14, background: '#18181b', borderRadius: 10, border: '1px solid rgba(255,255,255,0.08)' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <FileText size={24} style={{ color: '#f59e0b' }} />
-                        <div>
-                          <div style={{ fontSize: 13, fontWeight: 600, color: '#fff' }}>Official PDF Brochure</div>
-                          <div style={{ fontSize: 11, color: '#94a3b8' }}>{selectedMediaProject.brochure}</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 14, background: '#18181b', borderRadius: 10, border: '1px solid rgba(255,255,255,0.08)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                          <FileText size={24} style={{ color: '#f59e0b' }} />
+                          <div>
+                            <div style={{ fontSize: 13, fontWeight: 600, color: '#fff' }}>Official PDF Brochure</div>
+                            <div style={{ fontSize: 11, color: '#94a3b8' }}>{selectedMediaProject.brochure}</div>
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <a
+                            href={resolveMediaUrl(selectedMediaProject.brochure)}
+                            target="_blank"
+                            rel="noreferrer"
+                            style={{
+                              padding: '6px 12px',
+                              borderRadius: 6,
+                              fontSize: 12,
+                              background: 'rgba(255,255,255,0.08)',
+                              color: '#38bdf8',
+                              textDecoration: 'none',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 4,
+                            }}
+                          >
+                            <Eye size={13} /> View / Download PDF
+                          </a>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteMedia('brochure')}
+                            disabled={uploadingMedia}
+                            style={{
+                              padding: '6px 10px',
+                              borderRadius: 6,
+                              fontSize: 12,
+                              background: 'rgba(239, 68, 68, 0.15)',
+                              color: '#fca5a5',
+                              border: '1px solid rgba(239, 68, 68, 0.3)',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            <Trash2 size={13} />
+                          </button>
                         </div>
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <a
-                          href={selectedMediaProject.brochure.startsWith('http') ? selectedMediaProject.brochure : `${(import.meta.env.VITE_API_URL1 || '').replace(/\/+$/, '')}${selectedMediaProject.brochure.startsWith('/') ? '' : '/'}${selectedMediaProject.brochure}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          style={{
-                            padding: '6px 12px',
-                            borderRadius: 6,
-                            fontSize: 12,
-                            background: 'rgba(255,255,255,0.08)',
-                            color: '#38bdf8',
-                            textDecoration: 'none',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: 4,
-                          }}
-                        >
-                          <Eye size={13} /> View PDF
-                        </a>
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteMedia('brochure')}
-                          disabled={uploadingMedia}
-                          style={{
-                            padding: '6px 10px',
-                            borderRadius: 6,
-                            fontSize: 12,
-                            background: 'rgba(239, 68, 68, 0.15)',
-                            color: '#fca5a5',
-                            border: '1px solid rgba(239, 68, 68, 0.3)',
-                            cursor: 'pointer',
-                          }}
-                        >
-                          <Trash2 size={13} />
-                        </button>
+
+                      {/* Embedded PDF Viewer */}
+                      <div style={{ borderRadius: 10, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)', height: 360, background: '#18181b' }}>
+                        <iframe
+                          src={resolveMediaUrl(selectedMediaProject.brochure)}
+                          title="Brochure PDF Preview"
+                          style={{ width: '100%', height: '100%', border: 'none' }}
+                        />
                       </div>
                     </div>
                   )}
